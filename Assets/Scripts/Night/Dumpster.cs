@@ -14,6 +14,7 @@ public class Dumpster : MonoBehaviour, IInteractable
         if (alreadySearched) return;
 
         alreadySearched = true;
+        AudioManager.Instance?.PlayAt("dumpster_open", transform.position);
         int spoiled = Random.Range(minSpoiled, maxSpoiled + 1);
         PlayerEconomy.Instance?.AddResource(ResourceType.SpoiledIngredient, spoiled);
 

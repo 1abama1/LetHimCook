@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adbeb561656d5d7429cccfd2bc55dd66, type: 3}
+  m_Name: Ing_Bun_Fresh
+  m_EditorClassIdentifier: Assembly-CSharp::IngredientData
+  ingredientName: Bun
+  sprite: {fileID: 0}
+  rotLevel: 5
+  baseValue: 8
+  tintColor: {r: 0.9568628, g: 0.6431373, b: 0.3764706, a: 1}
+  rotParticlePrefab: {fileID: 0}
