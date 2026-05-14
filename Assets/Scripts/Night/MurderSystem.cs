@@ -52,12 +52,13 @@ public class MurderSystem : MonoBehaviour
         _cooldownTimer = attackCooldown;
         _animator?.SetTrigger("Attack");
         onAttack?.Invoke();
+        AudioManager.Instance?.Play("attack");
 
         Collider[] hits = Physics.OverlapSphere(transform.position, attackRange, hitLayer);
         foreach (var hit in hits)
         {
             HomelessNPC homeless = hit.GetComponent<HomelessNPC>();
-            if (homeless != null) { homeless.Kill(); onKill?.Invoke(); }
+            if (homeless != null) { homeless.Kill(); onKill?.Invoke(); AudioManager.Instance?.Play("kill"); }
         }
     }
 
@@ -72,6 +73,7 @@ public class MurderSystem : MonoBehaviour
                 homeless.Kill();
                 onStealthKill?.Invoke();
                 onKill?.Invoke();
+                AudioManager.Instance?.Play("stealth_kill");
                 break;
             }
         }

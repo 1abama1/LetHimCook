@@ -141,6 +141,7 @@ public class InspectorAI : MonoBehaviour
         suspicion = 0f;
         onSuspicionChanged?.Invoke(0f);
         onFineIssued?.Invoke();
+        AudioManager.Instance?.Play("inspector_fine");
         GameManager.Instance?.TriggerInspectorFine(fineAmount);
     }
 
@@ -150,6 +151,7 @@ public class InspectorAI : MonoBehaviour
         suspicion = Mathf.Max(0f, suspicion - 50f);
         onSuspicionChanged?.Invoke(suspicion);
         onBribeTaken?.Invoke();
+        AudioManager.Instance?.Play("bribe");
         return true;
     }
 

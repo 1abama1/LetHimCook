@@ -35,6 +35,7 @@ public class CookingStation : MonoBehaviour, IInteractable
         _cookDuration      = RecipeManager.Instance?.currentRecipe?.cookTimeSeconds ?? 8f;
 
         onIngredientPlaced?.Invoke(ingredient);
+        AudioManager.Instance?.Play("cook_start");
         StartCoroutine(CookRoutine());
         return true;
     }
@@ -58,6 +59,7 @@ public class CookingStation : MonoBehaviour, IInteractable
 
         _isCooking = false;
         onIngredientReady?.Invoke(currentIngredient);
+        AudioManager.Instance?.Play("cook_done");
     }
 
     public void HideIngredient()
