@@ -36,9 +36,9 @@ public class RecipeManager : MonoBehaviour
         onRecipeAssigned?.Invoke(recipe);
     }
 
-    public bool AddIngredient(IngredientData ingredient)
+    public void AddIngredient(IngredientData ingredient)
     {
-        if (currentRecipe == null) return false;
+        if (currentRecipe == null) return;
 
         bool needed = false;
         foreach (string req in currentRecipe.requiredIngredientNames)
@@ -49,7 +49,7 @@ public class RecipeManager : MonoBehaviour
                 break;
             }
         }
-        if (!needed) return false;
+        if (!needed) return;
 
         _addedIngredients.Add(ingredient.ingredientName);
         if (ingredient.IsSpoiled) _usedSpoiled = true;
@@ -61,7 +61,6 @@ public class RecipeManager : MonoBehaviour
 
         onIngredientAdded?.Invoke(ingredient.ingredientName);
         CheckCompletion();
-        return true;
     }
 
     void CheckCompletion()
