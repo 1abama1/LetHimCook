@@ -51,25 +51,11 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Store method references so OnDisable can unsubscribe the exact same delegate
-    void OnEnable()
-    {
-        if (_interactAction != null) _interactAction.performed += OnInteract;
-        if (_hideAction     != null) _hideAction.performed     += OnHide;
-    }
-
-    void OnDisable()
-    {
-        if (_interactAction != null) _interactAction.performed -= OnInteract;
-        if (_hideAction     != null) _hideAction.performed     -= OnHide;
-    }
-
-    void OnInteract(InputAction.CallbackContext ctx) => TryInteract();
-    void OnHide(InputAction.CallbackContext ctx)     => ToggleHide();
-
     void Update()
     {
         Vector2 raw = Vector2.zero;
+        
+        // Чтение ввода: приоритет у Input System, запасной - WASD на клавиатуре
         if (_moveAction != null) raw = _moveAction.ReadValue<Vector2>();
         else if (Keyboard.current != null)
         {
@@ -78,12 +64,16 @@ public class PlayerController : MonoBehaviour
         }
 
         _moveInput   = new Vector3(raw.x, 0f, raw.y);
-        _isSprinting = _sprintAction?.IsPressed() ?? (Keyboard.current?.leftShiftKey.isPressed ?? false);
-        _isSneaking  = _sneakAction?.IsPressed()  ?? (Keyboard.current?.leftCtrlKey.isPressed ?? false);
+        
+        // Объединенная логика кнопок
+        _isSprinting = (_sprintAction != null && _sprintAction.IsPressed()) || (Keyboard.current?.leftShiftKey.isPressed ?? false);
+        _isSneaking  = (_sneakAction != null && _sneakAction.IsPressed())  || (Keyboard.current?.leftCtrlKey.isPressed ?? false);
 
-        // Legacy fallback when Input System not configured
-        if (_interactAction == null && (Keyboard.current?.eKey.wasPressedThisFrame ?? false)) TryInteract();
-        if (_hideAction     == null && (Keyboard.current?.fKey.wasPressedThisFrame ?? false)) ToggleHide();
+        bool interactPressed = (_interactAction != null && _interactAction.WasPressedThisFrame()) || (Keyboard.current?.eKey.wasPressedThisFrame ?? false);
+        bool hidePressed     = (_hideAction != null && _hideAction.WasPressedThisFrame())     || (Keyboard.current?.fKey.wasPressedThisFrame ?? false);
+
+        if (interactPressed) TryInteract();
+        if (hidePressed)     ToggleHide();
 
         UpdateAnimator();
     }
@@ -122,7 +112,6 @@ public class PlayerController : MonoBehaviour
 
     public void TryInteract()
     {
-        // Use all layers if none assigned
         int mask = interactableLayer == 0 ? ~0 : interactableLayer.value;
 
         Collider[]    hits    = Physics.OverlapSphere(transform.position, interactRange, mask);
@@ -137,7 +126,15 @@ public class PlayerController : MonoBehaviour
             if (ia != null && dist < closest) { closest = dist; target = ia; }
         }
 
-        target?.Interact(this);
+        if (target != null)
+        {
+            Debug.Log($"[Player] Interacted with {((MonoBehaviour)target).gameObject.name}");
+            target.Interact(this);
+        }
+        else
+        {
+            Debug.Log("[Player] Tried to interact");
+        }
     }
 
     public void ToggleHide()
