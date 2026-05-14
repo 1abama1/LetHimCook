@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 using TMPro;
 using System.Collections.Generic;
 
@@ -93,6 +94,17 @@ public class GameHUD : MonoBehaviour
             stealthKillUI.SetActive(prog > 0.01f);
             if (stealthKillSlider != null) stealthKillSlider.value = prog;
         }
+
+        // Advance dialogue on left click or Space (only when no choices are shown)
+        if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsActive)
+        {
+            bool clicked = Mouse.current?.leftButton.wasPressedThisFrame    ?? false;
+            bool spaced  = Keyboard.current?.spaceKey.wasPressedThisFrame   ?? false;
+            if (_choiceButtons.Count == 0 && (clicked || spaced))
+            {
+                DialogueSystem.Instance.AdvanceLine();
+            }
+        }
     }
 
     void UpdateMoney(int amount)
@@ -143,13 +155,30 @@ public class GameHUD : MonoBehaviour
 
     void ShowChoices(List<DialogueChoice> choices)
     {
+        if (dialoguePanel != null) dialoguePanel.SetActive(true);
         ClearChoiceButtons();
         if (choiceButtonPrefab == null || choiceButtonContainer == null) return;
         for (int i = 0; i < choices.Count; i++)
         {
             int idx = i;
             Button btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
-            btn.GetComponentInChildren<TextMeshProUGUI>().text = choices[i].buttonLabel;
+            btn.gameObject.SetActive(true);
+
+            RectTransform rt = btn.GetComponent<RectTransform>();
+            rt.anchorMin        = new Vector2(0f, 0.5f);
+            rt.anchorMax        = new Vector2(1f, 0.5f);
+            rt.offsetMin        = new Vector2(0f, rt.offsetMin.y);
+            rt.offsetMax        = new Vector2(0f, rt.offsetMax.y);
+            rt.sizeDelta        = new Vector2(0f, rt.sizeDelta.y > 0 ? rt.sizeDelta.y : 40f);
+
+            TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null)
+            {
+                label.text         = choices[i].buttonLabel;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Ellipsis;
+            }
+
             btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(idx));
             _choiceButtons.Add(btn);
         }

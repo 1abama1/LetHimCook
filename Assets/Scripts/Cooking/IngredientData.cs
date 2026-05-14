@@ -12,6 +12,11 @@ public class IngredientData : ScriptableObject
     public bool IsSafe    => rotLevel < 50;
     public bool IsSpoiled => rotLevel >= 50;
 
+    public enum ProcessType { None, Chop, Fry, Boil }
+
+    public IngredientData cookedVersion;
+    public ProcessType requiredProcess = ProcessType.None;
+
     public int baseValue = 5;
     public Color tintColor = Color.white;
     public GameObject rotParticlePrefab;

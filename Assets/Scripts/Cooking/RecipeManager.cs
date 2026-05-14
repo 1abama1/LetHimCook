@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 using System.Collections.Generic;
+using System.Linq;
 
 public class RecipeManager : MonoBehaviour
 {
@@ -84,6 +85,44 @@ public class RecipeManager : MonoBehaviour
         currentRecipe = null;
         _addedIngredients.Clear();
         _usedSpoiled = false;
+    }
+
+    public bool CheckAndServeDish(List<IngredientData> submittedIngredients)
+    {
+        if (currentRecipe == null) return false;
+
+        // Собираем названия того, что принесли
+        List<string> submittedNames = new List<string>();
+        bool hasSpoiled = false;
+
+        foreach (var ing in submittedIngredients)
+        {
+            submittedNames.Add(ing.ingredientName);
+            if (ing.IsSpoiled) hasSpoiled = true;
+        }
+
+        // Проверяем, совпадают ли списки (без учета порядка)
+        bool isMatch = currentRecipe.requiredIngredientNames.Length == submittedNames.Count &&
+                       currentRecipe.requiredIngredientNames.All(submittedNames.Contains);
+
+        if (isMatch)
+        {
+            Debug.Log($"Блюдо {currentRecipe.dishName} успешно собрано и отдано!");
+            
+            // Вызываем событие завершения
+            onDishCompleted?.Invoke(currentRecipe, hasSpoiled);
+            
+            // Начисляем деньги
+            int pay = currentRecipe.basePayment + (hasSpoiled ? currentRecipe.spoiledBonusPayment : 0);
+            PlayerEconomy.Instance?.EarnMoney(pay);
+
+            // Очищаем текущий рецепт
+            currentRecipe = null;
+            return true; // Успех
+        }
+
+        Debug.Log("Блюдо собрано неверно!");
+        return false; // Ошибка в рецепте
     }
 
     public List<string> GetMissingIngredients()
