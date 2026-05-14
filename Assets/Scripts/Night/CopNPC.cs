@@ -30,6 +30,7 @@ public class CopNPC : MonoBehaviour
     private int       _currentPoint;
     private Transform _player;
     private float     _suspicionTimer;
+    private bool      _waiting;   // Guard: prevents WaitAndNext coroutine spam
 
     void Awake()
     {
@@ -50,9 +51,13 @@ public class CopNPC : MonoBehaviour
     void UpdatePatrol()
     {
         if (patrolPoints == null || patrolPoints.Length == 0) return;
+        if (_waiting) return;   // Already waiting at a point — don't move or re-trigger
         MoveTowards(patrolPoints[_currentPoint].position, patrolSpeed);
         if (Vector3.Distance(transform.position, patrolPoints[_currentPoint].position) < 0.2f)
+        {
+            _waiting = true;
             StartCoroutine(WaitAndNext());
+        }
         if (CanSeePlayer()) TransitionTo(CopState.Suspicious);
     }
 
@@ -60,6 +65,7 @@ public class CopNPC : MonoBehaviour
     {
         yield return new WaitForSeconds(waitAtPointSeconds);
         _currentPoint = (_currentPoint + 1) % patrolPoints.Length;
+        _waiting = false;
     }
 
     void UpdateSuspicious()

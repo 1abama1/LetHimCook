@@ -20,7 +20,8 @@ public class ClientNPC : MonoBehaviour
         {
             int randomIndex = Random.Range(0, RecipeManager.Instance.allRecipes.Count);
             wantedRecipe = RecipeManager.Instance.allRecipes[randomIndex];
-            RecipeManager.Instance.AssignRecipe(wantedRecipe);
+            // AssignRecipe убран отсюда: вызывайте его только когда игрок
+            // физически принимает заказ, чтобы несколько клиентов не перезаписывали друг друга.
         }
     }
 
@@ -46,9 +47,16 @@ public class ClientNPC : MonoBehaviour
         if (cookedRecipe == wantedRecipe)
         {
             isServed = true;
-            if (usedSpoiled) 
+            if (usedSpoiled)
             {
+                // Клиент заметил просрочку — диалог и штраф к репутации
                 DialogueSystem.Instance?.StartDialogue("client_complaint", this, null);
+                RestaurantReputation.Instance?.ChangeReputation(-15f);
+            }
+            else
+            {
+                // Идеальное блюдо — небольшой бонус к репутации
+                RestaurantReputation.Instance?.ChangeReputation(5f);
             }
             Destroy(gameObject, 2f);
         }
@@ -59,6 +67,7 @@ public class ClientNPC : MonoBehaviour
         isServed = true;
         onClientAngry?.Invoke();
         PlayerEconomy.Instance?.SpendMoney(10);
+        RestaurantReputation.Instance?.ChangeReputation(-10f); // Клиент ушёл недовольным
         Destroy(gameObject);
     }
 }

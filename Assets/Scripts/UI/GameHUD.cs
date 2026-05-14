@@ -21,6 +21,13 @@ public class GameHUD : MonoBehaviour
     public TextMeshProUGUI phaseTimerText;
     public TextMeshProUGUI phaseLabel;
 
+    [Header("Reputation")]
+    public Slider             reputationSlider;
+    public Image              reputationFill;
+    public Color              goodReputationColor = new Color(0.2f, 0.8f, 0.4f);
+    public Color              badReputationColor  = new Color(0.9f, 0.2f, 0.2f);
+    public GameObject         gameOverPanel;
+
     [Header("Stealth Kill")]
     public Slider     stealthKillSlider;
     public GameObject stealthKillUI;
@@ -49,6 +56,12 @@ public class GameHUD : MonoBehaviour
         if (inspector != null)
             inspector.onSuspicionChanged.AddListener(UpdateSuspicion);
 
+        if (RestaurantReputation.Instance != null)
+        {
+            RestaurantReputation.Instance.onReputationChanged.AddListener(UpdateReputation);
+            RestaurantReputation.Instance.onGameOver.AddListener(ShowGameOver);
+        }
+
         if (DialogueSystem.Instance != null)
         {
             DialogueSystem.Instance.onLineStart.AddListener(ShowDialogueLine);
@@ -58,6 +71,8 @@ public class GameHUD : MonoBehaviour
 
         UpdateMoney(PlayerEconomy.Instance?.Money ?? 0);
         UpdateSuspicion(0f);
+        UpdateReputation(RestaurantReputation.Instance?.reputation ?? 50f);
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
         HideDialogue();
     }
 
@@ -103,6 +118,19 @@ public class GameHUD : MonoBehaviour
         if (suspicionSlider != null) suspicionSlider.value = value / 100f;
         if (suspicionFill   != null)
             suspicionFill.color = Color.Lerp(lowSuspicionColor, highSuspicionColor, value / 100f);
+    }
+
+    void UpdateReputation(float value)
+    {
+        float t = value / 100f;
+        if (reputationSlider != null) reputationSlider.value = t;
+        if (reputationFill   != null)
+            reputationFill.color = Color.Lerp(badReputationColor, goodReputationColor, t);
+    }
+
+    void ShowGameOver()
+    {
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
     }
 
     void ShowDialogueLine(string speakerName, string text)

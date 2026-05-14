@@ -70,8 +70,7 @@ public class MurderSystem : MonoBehaviour
         _cooldownTimer = attackCooldown;
         _animator?.SetTrigger("Attack");
         onAttack?.Invoke();
-        // Временно закомментил AudioManager, если его скрипта еще нет, чтобы не было ошибок
-        // AudioManager.Instance?.Play("attack");
+        AudioManager.Instance?.Play("attack");
 
         Collider[] hits = Physics.OverlapSphere(transform.position, attackRange, hitLayer);
         foreach (var hit in hits)
@@ -80,8 +79,8 @@ public class MurderSystem : MonoBehaviour
             if (homeless != null) 
             { 
                 homeless.Kill(); 
-                onKill?.Invoke(); 
-                // AudioManager.Instance?.Play("kill"); 
+                onKill?.Invoke();
+                AudioManager.Instance?.Play("kill");
             }
         }
     }
@@ -97,7 +96,7 @@ public class MurderSystem : MonoBehaviour
                 homeless.Kill();
                 onStealthKill?.Invoke();
                 onKill?.Invoke();
-                // AudioManager.Instance?.Play("stealth_kill");
+                AudioManager.Instance?.Play("stealth_kill");
                 break;
             }
         }
