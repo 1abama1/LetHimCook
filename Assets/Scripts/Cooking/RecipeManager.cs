@@ -33,6 +33,7 @@ public class RecipeManager : MonoBehaviour
         currentRecipe = recipe;
         _addedIngredients.Clear();
         _usedSpoiled = false;
+        Debug.Log($"[RecipeManager] Assigned new order: {recipe.dishName}");
         onRecipeAssigned?.Invoke(recipe);
     }
 
@@ -53,6 +54,8 @@ public class RecipeManager : MonoBehaviour
 
         _addedIngredients.Add(ingredient.ingredientName);
         if (ingredient.IsSpoiled) _usedSpoiled = true;
+        
+        Debug.Log($"[RecipeManager] Added {ingredient.ingredientName} to dish! (Spoiled: {ingredient.IsSpoiled})");
 
         ResourceType resType = ingredient.IsSpoiled
             ? ResourceType.SpoiledIngredient
@@ -72,6 +75,7 @@ public class RecipeManager : MonoBehaviour
 
     void ServeDish()
     {
+        Debug.Log($"[RecipeManager] Dish '{currentRecipe.dishName}' completed and served! Spoiled used: {_usedSpoiled}");
         onDishCompleted?.Invoke(currentRecipe, _usedSpoiled);
 
         int pay = currentRecipe.basePayment + (_usedSpoiled ? currentRecipe.spoiledBonusPayment : 0);

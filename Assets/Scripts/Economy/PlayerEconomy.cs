@@ -84,6 +84,7 @@ public class PlayerEconomy : MonoBehaviour
         ResourceType.FreshIngredient   => _fresh,
         ResourceType.SpoiledIngredient => _spoiled,
         ResourceType.JunkLoot          => _junkLoot,
+        ResourceType.Money             => _money,
         _                              => 0
     };
 

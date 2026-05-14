@@ -38,10 +38,14 @@ public class MurderSystem : MonoBehaviour
     {
         if (_cooldownTimer > 0) _cooldownTimer -= Time.deltaTime;
 
-        if (_attackAction != null && _attackAction.WasPressedThisFrame())
-            TryAttack();
+        if (_attackAction == null) return;
 
-        if (_attackAction != null && _attackAction.IsPressed() && _player.IsSneaking)
+        if (!_player.IsSneaking && _attackAction.WasPressedThisFrame())
+        {
+            TryAttack();
+        }
+
+        if (_player.IsSneaking && _attackAction.IsPressed())
         {
             _stealthHoldTimer += Time.deltaTime;
             if (_stealthHoldTimer >= stealthKillTime)
@@ -60,11 +64,12 @@ public class MurderSystem : MonoBehaviour
     {
         if (_cooldownTimer > 0) return;
         _cooldownTimer = attackCooldown;
-        _animator?.SetTrigger("Attack");
+        if (_animator != null) _animator.SetTrigger("Attack");
         onAttack?.Invoke();
         AudioManager.Instance?.Play("attack");
 
-        Collider[] hits = Physics.OverlapSphere(transform.position, attackRange, hitLayer);
+        Vector3 hitPoint = transform.position + transform.forward * (attackRange * 0.5f);
+        Collider[] hits = Physics.OverlapSphere(hitPoint, attackRange, hitLayer);
         foreach (var hit in hits)
         {
             HomelessNPC homeless = hit.GetComponent<HomelessNPC>();
@@ -74,12 +79,14 @@ public class MurderSystem : MonoBehaviour
 
     void TryStealthKill()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, stealthKillRange, hitLayer);
+        Vector3 hitPoint = transform.position + transform.forward * (stealthKillRange * 0.5f);
+        Collider[] hits = Physics.OverlapSphere(hitPoint, stealthKillRange, hitLayer);
         foreach (var hit in hits)
         {
             HomelessNPC homeless = hit.GetComponent<HomelessNPC>();
             if (homeless != null && homeless.state != HomelessState.Dead)
             {
+                Debug.Log($"[Murder] Stealth killed {homeless.gameObject.name}!");
                 homeless.Kill();
                 onStealthKill?.Invoke();
                 onKill?.Invoke();
@@ -87,6 +94,8 @@ public class MurderSystem : MonoBehaviour
                 break;
             }
         }
+        
+        if (hits.Length == 0) Debug.Log("[Murder] Tried stealth kill, but missed.");
     }
 
     public float StealthKillProgress => _player.IsSneaking
@@ -95,9 +104,13 @@ public class MurderSystem : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
+        Vector3 attackPoint = transform.position + transform.forward * (attackRange * 0.5f);
+        Vector3 stealthPoint = transform.position + transform.forward * (stealthKillRange * 0.5f);
+
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.DrawWireSphere(attackPoint, attackRange);
+        
         Gizmos.color = new Color(1f, 0f, 0.5f);
-        Gizmos.DrawWireSphere(transform.position, stealthKillRange);
+        Gizmos.DrawWireSphere(stealthPoint, stealthKillRange);
     }
 }

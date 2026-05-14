@@ -74,7 +74,8 @@ public class HomelessNPC : MonoBehaviour, IInteractable
 
     IEnumerator DeathRoutine()
     {
-        GetComponent<Animator>()?.SetTrigger("Die");
+        Animator anim = GetComponent<Animator>();
+        if (anim != null) anim.SetTrigger("Die");
         yield return new WaitForSeconds(2f);
         gameObject.SetActive(false);
     }

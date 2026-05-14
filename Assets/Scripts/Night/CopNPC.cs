@@ -30,6 +30,7 @@ public class CopNPC : MonoBehaviour
     private int       _currentPoint;
     private Transform _player;
     private float     _suspicionTimer;
+    private bool      _isWaiting;
 
     void Awake()
     {
@@ -51,15 +52,17 @@ public class CopNPC : MonoBehaviour
     {
         if (patrolPoints == null || patrolPoints.Length == 0) return;
         MoveTowards(patrolPoints[_currentPoint].position, patrolSpeed);
-        if (Vector3.Distance(transform.position, patrolPoints[_currentPoint].position) < 0.2f)
+        if (!_isWaiting && Vector3.Distance(transform.position, patrolPoints[_currentPoint].position) < 0.2f)
             StartCoroutine(WaitAndNext());
         if (CanSeePlayer()) TransitionTo(CopState.Suspicious);
     }
 
     IEnumerator WaitAndNext()
     {
+        _isWaiting = true;
         yield return new WaitForSeconds(waitAtPointSeconds);
         _currentPoint = (_currentPoint + 1) % patrolPoints.Length;
+        _isWaiting = false;
     }
 
     void UpdateSuspicious()

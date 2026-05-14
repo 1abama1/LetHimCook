@@ -11,7 +11,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Interaction")]
     public float     interactRange     = 1.5f;
-    public LayerMask interactableLayer = ~0;    // All layers by default
+    public LayerMask interactableLayer = ~0;
 
     private Rigidbody _rb;
     private Animator  _animator;
@@ -35,9 +35,7 @@ public class PlayerController : MonoBehaviour
         _rb       = GetComponent<Rigidbody>();
         _animator = GetComponent<Animator>();
 
-        // Prevent physics from tipping the character over
-        _rb.constraints = RigidbodyConstraints.FreezeRotationX
-                        | RigidbodyConstraints.FreezeRotationZ;
+        _rb.constraints = RigidbodyConstraints.FreezeRotation;
         _rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         _playerInput = GetComponent<PlayerInput>();
@@ -81,11 +79,10 @@ public class PlayerController : MonoBehaviour
         velocity.y = _rb.linearVelocity.y;          // Preserve gravity
         _rb.linearVelocity = velocity;
 
-        // Rotate to face movement direction — only Y axis
         if (_moveInput.sqrMagnitude > 0.01f)
         {
             Quaternion targetRot = Quaternion.LookRotation(_moveInput.normalized, Vector3.up);
-            _rb.rotation = Quaternion.Slerp(_rb.rotation, targetRot, 0.2f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 10f * Time.fixedDeltaTime);
         }
     }
 
@@ -99,7 +96,6 @@ public class PlayerController : MonoBehaviour
 
     public void TryInteract()
     {
-        // Use all layers if none assigned
         int mask = interactableLayer == 0 ? ~0 : interactableLayer.value;
 
         Collider[]    hits    = Physics.OverlapSphere(transform.position, interactRange, mask);
@@ -108,7 +104,7 @@ public class PlayerController : MonoBehaviour
 
         foreach (var hit in hits)
         {
-            if (hit.gameObject == gameObject) continue;   // Skip self
+            if (hit.gameObject == gameObject) continue;
             float dist = Vector3.Distance(transform.position, hit.transform.position);
             IInteractable ia = hit.GetComponent<IInteractable>();
             if (ia != null && dist < closest) { closest = dist; target = ia; }

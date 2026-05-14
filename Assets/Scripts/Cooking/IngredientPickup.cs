@@ -8,6 +8,7 @@ public class IngredientPickup : MonoBehaviour, IInteractable
     {
         if (player.HeldIngredient != null) return;
         player.GiveIngredient(ingredientData);
+        Debug.Log($"[Pickup] Player picked up {ingredientData.ingredientName} from the world.");
         gameObject.SetActive(false);
     }
 }
