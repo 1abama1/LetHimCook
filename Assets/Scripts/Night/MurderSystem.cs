@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
 
 public class MurderSystem : MonoBehaviour
 {
@@ -28,10 +29,13 @@ public class MurderSystem : MonoBehaviour
     {
         if (_cooldownTimer > 0) _cooldownTimer -= Time.deltaTime;
 
-        if (Input.GetKeyDown(KeyCode.Q))
+        bool attackPressed = Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame;
+        bool attackHeld = Keyboard.current != null && Keyboard.current.qKey.isPressed;
+
+        if (attackPressed)
             TryAttack();
 
-        if (Input.GetKey(KeyCode.Q) && _player.IsSneaking)
+        if (attackHeld && _player.IsSneaking)
         {
             _stealthHoldTimer += Time.deltaTime;
             if (_stealthHoldTimer >= stealthKillTime)

@@ -69,17 +69,21 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        Vector2 raw = _moveAction != null
-            ? _moveAction.ReadValue<Vector2>()
-            : new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        Vector2 raw = Vector2.zero;
+        if (_moveAction != null) raw = _moveAction.ReadValue<Vector2>();
+        else if (Keyboard.current != null)
+        {
+            raw.x = (Keyboard.current.dKey.isPressed ? 1 : 0) - (Keyboard.current.aKey.isPressed ? 1 : 0);
+            raw.y = (Keyboard.current.wKey.isPressed ? 1 : 0) - (Keyboard.current.sKey.isPressed ? 1 : 0);
+        }
 
         _moveInput   = new Vector3(raw.x, 0f, raw.y);
-        _isSprinting = _sprintAction?.IsPressed() ?? Input.GetKey(KeyCode.LeftShift);
-        _isSneaking  = _sneakAction?.IsPressed()  ?? Input.GetKey(KeyCode.LeftControl);
+        _isSprinting = _sprintAction?.IsPressed() ?? (Keyboard.current?.leftShiftKey.isPressed ?? false);
+        _isSneaking  = _sneakAction?.IsPressed()  ?? (Keyboard.current?.leftCtrlKey.isPressed ?? false);
 
         // Legacy fallback when Input System not configured
-        if (_interactAction == null && Input.GetKeyDown(KeyCode.E)) TryInteract();
-        if (_hideAction     == null && Input.GetKeyDown(KeyCode.F)) ToggleHide();
+        if (_interactAction == null && (Keyboard.current?.eKey.wasPressedThisFrame ?? false)) TryInteract();
+        if (_hideAction     == null && (Keyboard.current?.fKey.wasPressedThisFrame ?? false)) ToggleHide();
 
         UpdateAnimator();
     }
