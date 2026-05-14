@@ -88,15 +88,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Sneak",
-                    "type": "Button",
-                    "id": "b5b6dc50-885c-4d63-82e8-ed4e82736170",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "Hide",
                     "type": "Button",
                     "id": "41d89e55-7e26-471b-9eaa-98af23a1ecac",
