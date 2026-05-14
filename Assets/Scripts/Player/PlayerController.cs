@@ -51,14 +51,27 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        Vector2 raw = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
+        Vector2 raw = Vector2.zero;
+        
+        // Чтение ввода: приоритет у Input System, запасной - WASD на клавиатуре
+        if (_moveAction != null) raw = _moveAction.ReadValue<Vector2>();
+        else if (Keyboard.current != null)
+        {
+            raw.x = (Keyboard.current.dKey.isPressed ? 1 : 0) - (Keyboard.current.aKey.isPressed ? 1 : 0);
+            raw.y = (Keyboard.current.wKey.isPressed ? 1 : 0) - (Keyboard.current.sKey.isPressed ? 1 : 0);
+        }
 
         _moveInput   = new Vector3(raw.x, 0f, raw.y);
-        _isSprinting = _sprintAction?.IsPressed() ?? false;
-        _isSneaking  = _sneakAction?.IsPressed()  ?? false;
+        
+        // Объединенная логика кнопок
+        _isSprinting = (_sprintAction != null && _sprintAction.IsPressed()) || (Keyboard.current?.leftShiftKey.isPressed ?? false);
+        _isSneaking  = (_sneakAction != null && _sneakAction.IsPressed())  || (Keyboard.current?.leftCtrlKey.isPressed ?? false);
 
-        if (_interactAction != null && _interactAction.WasPressedThisFrame()) TryInteract();
-        if (_hideAction     != null && _hideAction.WasPressedThisFrame())     ToggleHide();
+        bool interactPressed = (_interactAction != null && _interactAction.WasPressedThisFrame()) || (Keyboard.current?.eKey.wasPressedThisFrame ?? false);
+        bool hidePressed     = (_hideAction != null && _hideAction.WasPressedThisFrame())     || (Keyboard.current?.fKey.wasPressedThisFrame ?? false);
+
+        if (interactPressed) TryInteract();
+        if (hidePressed)     ToggleHide();
 
         UpdateAnimator();
     }
