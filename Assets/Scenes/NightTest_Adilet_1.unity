@@ -950,7 +950,6 @@ MonoBehaviour:
   interactableLayer:
     serializedVersion: 2
     m_Bits: 64
-  holdPoint: {fileID: 0}
 --- !u!136 &1851875701
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -999,7 +998,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 32
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!114 &1851875703
 MonoBehaviour:
