@@ -10,16 +10,15 @@ public class PlayerController : MonoBehaviour
     public float sneakMultiplier  = 0.5f;
 
     [Header("Interaction")]
-    public float      interactRange    = 1.5f;
-    public LayerMask  interactableLayer;
-    public Transform  holdPoint;
+    public float     interactRange     = 1.5f;
+    public LayerMask interactableLayer = ~0;    // All layers by default
 
-    private Rigidbody  _rb;
-    private Animator   _animator;
-    private Vector3    _moveInput;
-    private bool       _isSprinting;
-    private bool       _isSneaking;
-    private bool       _isHiding;
+    private Rigidbody _rb;
+    private Animator  _animator;
+    private Vector3   _moveInput;
+    private bool      _isSprinting;
+    private bool      _isSneaking;
+    private bool      _isHiding;
 
     private IngredientData _heldIngredient;
     public  IngredientData HeldIngredient => _heldIngredient;
@@ -33,10 +32,15 @@ public class PlayerController : MonoBehaviour
 
     void Awake()
     {
-        _rb          = GetComponent<Rigidbody>();
-        _animator    = GetComponent<Animator>();
-        _playerInput = GetComponent<PlayerInput>();
+        _rb       = GetComponent<Rigidbody>();
+        _animator = GetComponent<Animator>();
 
+        // Prevent physics from tipping the character over
+        _rb.constraints = RigidbodyConstraints.FreezeRotationX
+                        | RigidbodyConstraints.FreezeRotationZ;
+        _rb.interpolation = RigidbodyInterpolation.Interpolate;
+
+        _playerInput = GetComponent<PlayerInput>();
         if (_playerInput != null)
         {
             _moveAction     = _playerInput.actions["Move"];
@@ -47,19 +51,21 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Store method references so OnDisable can unsubscribe the exact same delegate
     void OnEnable()
     {
-        _interactAction?.Enable();
-        _hideAction?.Enable();
-        if (_interactAction != null) _interactAction.performed += _ => TryInteract();
-        if (_hideAction     != null) _hideAction.performed     += _ => ToggleHide();
+        if (_interactAction != null) _interactAction.performed += OnInteract;
+        if (_hideAction     != null) _hideAction.performed     += OnHide;
     }
 
     void OnDisable()
     {
-        if (_interactAction != null) _interactAction.performed -= _ => TryInteract();
-        if (_hideAction     != null) _hideAction.performed     -= _ => ToggleHide();
+        if (_interactAction != null) _interactAction.performed -= OnInteract;
+        if (_hideAction     != null) _hideAction.performed     -= OnHide;
     }
+
+    void OnInteract(InputAction.CallbackContext ctx) => TryInteract();
+    void OnHide(InputAction.CallbackContext ctx)     => ToggleHide();
 
     void Update()
     {
@@ -71,6 +77,7 @@ public class PlayerController : MonoBehaviour
         _isSprinting = _sprintAction?.IsPressed() ?? Input.GetKey(KeyCode.LeftShift);
         _isSneaking  = _sneakAction?.IsPressed()  ?? Input.GetKey(KeyCode.LeftControl);
 
+        // Legacy fallback when Input System not configured
         if (_interactAction == null && Input.GetKeyDown(KeyCode.E)) TryInteract();
         if (_hideAction     == null && Input.GetKeyDown(KeyCode.F)) ToggleHide();
 
@@ -79,18 +86,26 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (_isHiding) { _rb.linearVelocity = Vector3.zero; return; }
+        if (_isHiding)
+        {
+            _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, 0f);
+            return;
+        }
 
         float speed = moveSpeed;
         if (_isSprinting) speed *= sprintMultiplier;
         if (_isSneaking)  speed *= sneakMultiplier;
 
         Vector3 velocity = _moveInput.normalized * speed;
-        velocity.y       = _rb.linearVelocity.y;
+        velocity.y = _rb.linearVelocity.y;          // Preserve gravity
         _rb.linearVelocity = velocity;
 
+        // Rotate to face movement direction — only Y axis
         if (_moveInput.sqrMagnitude > 0.01f)
-            transform.forward = Vector3.Lerp(transform.forward, _moveInput.normalized, 0.2f);
+        {
+            Quaternion targetRot = Quaternion.LookRotation(_moveInput.normalized, Vector3.up);
+            _rb.rotation = Quaternion.Slerp(_rb.rotation, targetRot, 0.2f);
+        }
     }
 
     void UpdateAnimator()
@@ -103,14 +118,18 @@ public class PlayerController : MonoBehaviour
 
     public void TryInteract()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, interactRange, interactableLayer);
-        float       closest = float.MaxValue;
+        // Use all layers if none assigned
+        int mask = interactableLayer == 0 ? ~0 : interactableLayer.value;
+
+        Collider[]    hits    = Physics.OverlapSphere(transform.position, interactRange, mask);
+        float         closest = float.MaxValue;
         IInteractable target  = null;
 
         foreach (var hit in hits)
         {
-            float dist         = Vector3.Distance(transform.position, hit.transform.position);
-            IInteractable ia   = hit.GetComponent<IInteractable>();
+            if (hit.gameObject == gameObject) continue;   // Skip self
+            float dist = Vector3.Distance(transform.position, hit.transform.position);
+            IInteractable ia = hit.GetComponent<IInteractable>();
             if (ia != null && dist < closest) { closest = dist; target = ia; }
         }
 
@@ -120,28 +139,23 @@ public class PlayerController : MonoBehaviour
     public void ToggleHide()
     {
         _isHiding = !_isHiding;
-
-        // Hide spoiled ingredient on cooking station when inspector turns
         if (_isHiding)
         {
-            Collider[] hits = Physics.OverlapSphere(transform.position, interactRange, interactableLayer);
-            foreach (var hit in hits)
+            int mask = interactableLayer == 0 ? ~0 : interactableLayer.value;
+            foreach (var hit in Physics.OverlapSphere(transform.position, interactRange, mask))
                 hit.GetComponent<CookingStation>()?.HideIngredient();
         }
     }
 
-    public bool IsHiding => _isHiding;
+    public bool IsHiding  => _isHiding;
     public bool IsSneaking => _isSneaking;
 
-    public void GiveIngredient(IngredientData ingredient)
-    {
-        _heldIngredient = ingredient;
-    }
+    public void GiveIngredient(IngredientData ingredient) => _heldIngredient = ingredient;
 
     public IngredientData TakeIngredient()
     {
-        var tmp         = _heldIngredient;
-        _heldIngredient = null;
+        IngredientData tmp = _heldIngredient;
+        _heldIngredient    = null;
         return tmp;
     }
 

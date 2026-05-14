@@ -950,7 +950,6 @@ MonoBehaviour:
   interactableLayer:
     serializedVersion: 2
     m_Bits: 64
-  holdPoint: {fileID: 0}
 --- !u!136 &1851875701
 CapsuleCollider:
   m_ObjectHideFlags: 0
