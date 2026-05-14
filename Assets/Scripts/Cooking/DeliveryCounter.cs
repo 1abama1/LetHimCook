@@ -6,19 +6,30 @@ public class DeliveryCounter : MonoBehaviour, IInteractable
 
     public void Interact(PlayerController player)
     {
-        if (plateToServe != null && plateToServe.ingredientsOnPlate.Count > 0)
-        {
-            bool success = RecipeManager.Instance.CheckAndServeDish(plateToServe.ingredientsOnPlate);
+        if (plateToServe == null || plateToServe.ingredientsOnPlate.Count == 0) return;
 
-            if (success)
+        RecipeData matched = RecipeManager.Instance.CheckAndServeDish(
+            plateToServe.ingredientsOnPlate, out bool hasSpoiled);
+
+        if (matched != null)
+        {
+            plateToServe.ingredientsOnPlate.Clear();
+            AudioManager.Instance?.Play("order_success");
+
+            // Notify the ClientNPC that wanted this exact recipe
+            ClientNPC[] clients = FindObjectsByType<ClientNPC>(FindObjectsSortMode.None);
+            foreach (ClientNPC c in clients)
             {
-                plateToServe.ingredientsOnPlate.Clear();
-                AudioManager.Instance?.Play("order_success");
+                if (c.WantedRecipe == matched)
+                {
+                    c.ReceiveDish(matched, hasSpoiled);
+                    break;
+                }
             }
-            else
-            {
-                AudioManager.Instance?.Play("order_fail");
-            }
+        }
+        else
+        {
+            AudioManager.Instance?.Play("order_fail");
         }
     }
 }

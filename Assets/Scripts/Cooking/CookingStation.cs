@@ -63,7 +63,8 @@ public class CookingStation : MonoBehaviour, IInteractable
 
         currentIngredient  = ingredient;
         _ingredientHidden  = false;
-        _cookDuration      = RecipeManager.Instance?.currentRecipe?.cookTimeSeconds ?? 8f;
+        // Use ingredient's own timing, NOT the current recipe (which could change mid-cook).
+        _cookDuration      = ingredient.cookedVersion != null ? 8f : 5f;
 
         Debug.Log($"[Cooking] {ingredient.ingredientName} placed on {stationName}. Cooking started!");
         onIngredientPlaced?.Invoke(ingredient);
@@ -79,7 +80,15 @@ public class CookingStation : MonoBehaviour, IInteractable
 
         while (_cookTimer > 0)
         {
-            if (!_ingredientHidden && currentIngredient != null && currentIngredient.IsSpoiled)
+            // Guard: player may have picked up the ingredient during cooking
+            if (currentIngredient == null)
+            {
+                _isCooking = false;
+                if (progressBar != null) progressBar.UpdateProgress(0f);
+                yield break;
+            }
+
+            if (!_ingredientHidden && currentIngredient.IsSpoiled)
             {
                 if (_inspector != null && _inspector.IsWatchingStation(this))
                     _inspector.AddSuspicion(15f * Time.deltaTime);
@@ -88,18 +97,24 @@ public class CookingStation : MonoBehaviour, IInteractable
 
             if (progressBar != null)
             {
-                progressBar.UpdateProgress(CookProgress); 
+                progressBar.UpdateProgress(CookProgress);
             }
 
             yield return null;
         }
 
         _isCooking = false;
-        if (currentIngredient.cookedVersion != null)
+
+        // Guard: ingredient could have been removed on the very last frame
+        if (currentIngredient == null)
         {
-            currentIngredient = currentIngredient.cookedVersion;
+            if (progressBar != null) progressBar.UpdateProgress(0f);
+            yield break;
         }
-        
+
+        if (currentIngredient.cookedVersion != null)
+            currentIngredient = currentIngredient.cookedVersion;
+
         if (progressBar != null) progressBar.UpdateProgress(0f);
 
         Debug.Log($"[Cooking] {currentIngredient.ingredientName} is READY on {stationName}!");

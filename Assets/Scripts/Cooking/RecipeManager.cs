@@ -38,6 +38,8 @@ public class RecipeManager : MonoBehaviour
         onRecipeAssigned?.Invoke(recipe);
     }
 
+    // AddIngredient tracks ingredients for UI/HUD purposes only — it no longer
+    // triggers ServeDish to avoid double-payment. Money is only paid via CheckAndServeDish.
     public void AddIngredient(IngredientData ingredient)
     {
         if (currentRecipe == null) return;
@@ -55,8 +57,8 @@ public class RecipeManager : MonoBehaviour
 
         _addedIngredients.Add(ingredient.ingredientName);
         if (ingredient.IsSpoiled) _usedSpoiled = true;
-        
-        Debug.Log($"[RecipeManager] Added {ingredient.ingredientName} to dish! (Spoiled: {ingredient.IsSpoiled})");
+
+        Debug.Log($"[RecipeManager] Tracked {ingredient.ingredientName} for HUD. (Spoiled: {ingredient.IsSpoiled})");
 
         ResourceType resType = ingredient.IsSpoiled
             ? ResourceType.SpoiledIngredient
@@ -64,65 +66,46 @@ public class RecipeManager : MonoBehaviour
         PlayerEconomy.Instance?.UseResource(resType, 1);
 
         onIngredientAdded?.Invoke(ingredient.ingredientName);
-        CheckCompletion();
+        // NOTE: No longer calls CheckCompletion/ServeDish here.
+        // Serving happens exclusively through CheckAndServeDish (called by DeliveryCounter).
     }
 
-    void CheckCompletion()
+    // Returns the matched recipe (before clearing it) on success, or null on failure.
+    // Caller is responsible for notifying the correct ClientNPC.
+    public RecipeData CheckAndServeDish(List<IngredientData> submittedIngredients, out bool hasSpoiled)
     {
-        foreach (string req in currentRecipe.requiredIngredientNames)
-            if (!_addedIngredients.Contains(req)) return;
-        ServeDish();
-    }
+        hasSpoiled = false;
+        if (currentRecipe == null) return null;
 
-    void ServeDish()
-    {
-        Debug.Log($"[RecipeManager] Dish '{currentRecipe.dishName}' completed and served! Spoiled used: {_usedSpoiled}");
-        onDishCompleted?.Invoke(currentRecipe, _usedSpoiled);
-
-        int pay = currentRecipe.basePayment + (_usedSpoiled ? currentRecipe.spoiledBonusPayment : 0);
-        PlayerEconomy.Instance?.EarnMoney(pay);
-
-        currentRecipe = null;
-        _addedIngredients.Clear();
-        _usedSpoiled = false;
-    }
-
-    public bool CheckAndServeDish(List<IngredientData> submittedIngredients)
-    {
-        if (currentRecipe == null) return false;
-
-        // Собираем названия того, что принесли
         List<string> submittedNames = new List<string>();
-        bool hasSpoiled = false;
-
         foreach (var ing in submittedIngredients)
         {
             submittedNames.Add(ing.ingredientName);
             if (ing.IsSpoiled) hasSpoiled = true;
         }
 
-        // Проверяем, совпадают ли списки (без учета порядка)
         bool isMatch = currentRecipe.requiredIngredientNames.Length == submittedNames.Count &&
                        currentRecipe.requiredIngredientNames.All(submittedNames.Contains);
 
         if (isMatch)
         {
-            Debug.Log($"Блюдо {currentRecipe.dishName} успешно собрано и отдано!");
-            
-            // Вызываем событие завершения
-            onDishCompleted?.Invoke(currentRecipe, hasSpoiled);
-            
-            // Начисляем деньги
-            int pay = currentRecipe.basePayment + (hasSpoiled ? currentRecipe.spoiledBonusPayment : 0);
+            // Capture recipe BEFORE clearing so caller can notify the right ClientNPC
+            RecipeData matched = currentRecipe;
+
+            Debug.Log($"[RecipeManager] Dish '{matched.dishName}' matched — serving!");
+            onDishCompleted?.Invoke(matched, hasSpoiled);
+
+            int pay = matched.basePayment + (hasSpoiled ? matched.spoiledBonusPayment : 0);
             PlayerEconomy.Instance?.EarnMoney(pay);
 
-            // Очищаем текущий рецепт
             currentRecipe = null;
-            return true; // Успех
+            _addedIngredients.Clear();
+            _usedSpoiled = false;
+            return matched; // Success — caller notifies ClientNPC
         }
 
-        Debug.Log("Блюдо собрано неверно!");
-        return false; // Ошибка в рецепте
+        Debug.Log("[RecipeManager] Submitted ingredients do not match the current order.");
+        return null; // Wrong dish
     }
 
     public List<string> GetMissingIngredients()
