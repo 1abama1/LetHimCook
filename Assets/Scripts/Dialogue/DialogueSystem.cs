@@ -120,6 +120,23 @@ public class DialogueSystem : MonoBehaviour
             DialogueNode node = asset.GetNode(id);
             if (node != null) return node;
         }
+
+        // --- Диагностика: сообщает точно что не найдено ---
+        if (dialogueAssets.Count == 0)
+        {
+            Debug.LogWarning("[DialogueSystem] Нет ни одного DialogueAsset в списке! " +
+                             "Добавьте ассет в инспекторе объекта DialogueSystem.");
+        }
+        else
+        {
+            var allIds = new System.Text.StringBuilder();
+            foreach (var asset in dialogueAssets)
+                foreach (var node in asset.nodes)
+                    allIds.Append(node.id).Append(", ");
+
+            Debug.LogWarning($"[DialogueSystem] Узел с ID \"{id}\" не найден! " +
+                             $"Доступные ID: [{allIds}]");
+        }
         return null;
     }
 }
