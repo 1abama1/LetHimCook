@@ -51,35 +51,16 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Store method references so OnDisable can unsubscribe the exact same delegate
-    void OnEnable()
-    {
-        if (_interactAction != null) _interactAction.performed += OnInteract;
-        if (_hideAction     != null) _hideAction.performed     += OnHide;
-    }
-
-    void OnDisable()
-    {
-        if (_interactAction != null) _interactAction.performed -= OnInteract;
-        if (_hideAction     != null) _hideAction.performed     -= OnHide;
-    }
-
-    void OnInteract(InputAction.CallbackContext ctx) => TryInteract();
-    void OnHide(InputAction.CallbackContext ctx)     => ToggleHide();
-
     void Update()
     {
-        Vector2 raw = _moveAction != null
-            ? _moveAction.ReadValue<Vector2>()
-            : new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        Vector2 raw = _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
 
         _moveInput   = new Vector3(raw.x, 0f, raw.y);
-        _isSprinting = _sprintAction?.IsPressed() ?? Input.GetKey(KeyCode.LeftShift);
-        _isSneaking  = _sneakAction?.IsPressed()  ?? Input.GetKey(KeyCode.LeftControl);
+        _isSprinting = _sprintAction?.IsPressed() ?? false;
+        _isSneaking  = _sneakAction?.IsPressed()  ?? false;
 
-        // Legacy fallback when Input System not configured
-        if (_interactAction == null && Input.GetKeyDown(KeyCode.E)) TryInteract();
-        if (_hideAction     == null && Input.GetKeyDown(KeyCode.F)) ToggleHide();
+        if (_interactAction != null && _interactAction.WasPressedThisFrame()) TryInteract();
+        if (_hideAction     != null && _hideAction.WasPressedThisFrame())     ToggleHide();
 
         UpdateAnimator();
     }
@@ -133,7 +114,15 @@ public class PlayerController : MonoBehaviour
             if (ia != null && dist < closest) { closest = dist; target = ia; }
         }
 
-        target?.Interact(this);
+        if (target != null)
+        {
+            Debug.Log($"[Player] Interacted with {((MonoBehaviour)target).gameObject.name}");
+            target.Interact(this);
+        }
+        else
+        {
+            Debug.Log("[Player] Tried to interact");
+        }
     }
 
     public void ToggleHide()

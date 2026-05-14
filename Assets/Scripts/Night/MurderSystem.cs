@@ -17,6 +17,7 @@ public class MurderSystem : MonoBehaviour
     private float _stealthHoldTimer;
     private Animator _animator;
     private PlayerController _player;
+    private UnityEngine.InputSystem.InputAction _attackAction;
 
     void Awake()
     {
@@ -24,14 +25,23 @@ public class MurderSystem : MonoBehaviour
         _animator = GetComponent<Animator>();
     }
 
+    void Start()
+    {
+        var playerInput = GetComponent<UnityEngine.InputSystem.PlayerInput>();
+        if (playerInput != null)
+        {
+            _attackAction = playerInput.actions["Attack"];
+        }
+    }
+
     void Update()
     {
         if (_cooldownTimer > 0) _cooldownTimer -= Time.deltaTime;
 
-        if (Input.GetKeyDown(KeyCode.Q))
+        if (_attackAction != null && _attackAction.WasPressedThisFrame())
             TryAttack();
 
-        if (Input.GetKey(KeyCode.Q) && _player.IsSneaking)
+        if (_attackAction != null && _attackAction.IsPressed() && _player.IsSneaking)
         {
             _stealthHoldTimer += Time.deltaTime;
             if (_stealthHoldTimer >= stealthKillTime)
