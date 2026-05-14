@@ -33,6 +33,14 @@ public class GameHUD : MonoBehaviour
     public Slider     stealthKillSlider;
     public GameObject stealthKillUI;
 
+    [Header("Flashlight Battery")]
+    public Slider             batterySlider;
+    public Image              batteryFill;
+    public TextMeshProUGUI    batteryText;
+    public Color              batteryFullColor = new Color(0.3f, 0.9f, 0.4f);
+    public Color              batteryLowColor  = new Color(0.9f, 0.2f, 0.1f);
+    public GameObject         flashlightBatteryGroup; // вся группа: скрывается днём
+
     [Header("Dialogue")]
     public GameObject          dialoguePanel;
     public TextMeshProUGUI     speakerNameText;
@@ -40,12 +48,22 @@ public class GameHUD : MonoBehaviour
     public Transform           choiceButtonContainer;
     public Button              choiceButtonPrefab;
 
-    private MurderSystem   _murderSystem;
-    private List<Button>   _choiceButtons = new List<Button>();
+    private MurderSystem          _murderSystem;
+    private FlashlightController  _flashlight;
+    private List<Button>          _choiceButtons = new List<Button>();
 
     void Start()
     {
         _murderSystem = FindFirstObjectByType<MurderSystem>();
+
+        // Фонарик
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        if (p != null)
+        {
+            _flashlight = p.GetComponent<FlashlightController>();
+            if (_flashlight != null)
+                _flashlight.onBatteryChanged.AddListener(UpdateBattery);
+        }
 
         if (PlayerEconomy.Instance != null)
         {
@@ -70,10 +88,20 @@ public class GameHUD : MonoBehaviour
             DialogueSystem.Instance.onDialogueEnd.AddListener(HideDialogue);
         }
 
+        // Подписываемся на смену фаз — батарейка видна только ночью
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.onNightBegin.AddListener(() => SetBatteryGroupVisible(true));
+            GameManager.Instance.onDayBegin.AddListener(()   => SetBatteryGroupVisible(false));
+        }
+
         UpdateMoney(PlayerEconomy.Instance?.Money ?? 0);
         UpdateSuspicion(0f);
         UpdateReputation(RestaurantReputation.Instance?.reputation ?? 50f);
+        UpdateBattery(1f);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        bool isNight = GameManager.Instance?.currentPhase == GamePhase.Night;
+        SetBatteryGroupVisible(isNight);
         HideDialogue();
     }
 
@@ -130,6 +158,20 @@ public class GameHUD : MonoBehaviour
         if (suspicionSlider != null) suspicionSlider.value = value / 100f;
         if (suspicionFill   != null)
             suspicionFill.color = Color.Lerp(lowSuspicionColor, highSuspicionColor, value / 100f);
+    }
+
+    void UpdateBattery(float percent)
+    {
+        if (batterySlider != null) batterySlider.value = percent;
+        if (batteryFill   != null)
+            batteryFill.color = Color.Lerp(batteryLowColor, batteryFullColor, percent);
+        if (batteryText   != null)
+            batteryText.text = $"{Mathf.RoundToInt(percent * 100f)}%";
+    }
+
+    void SetBatteryGroupVisible(bool visible)
+    {
+        if (flashlightBatteryGroup != null) flashlightBatteryGroup.SetActive(visible);
     }
 
     void UpdateReputation(float value)

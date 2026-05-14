@@ -19,7 +19,7 @@ public class WorldSpaceBar : MonoBehaviour
         canvas.renderMode = RenderMode.WorldSpace;
 
         RectTransform rt = GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(100f, 15f);
+        rt.sizeDelta = new Vector2(50f, 15f);
         rt.localScale = Vector3.one * 0.01f; // масштаб для world space
 
         CanvasScaler scaler = gameObject.GetComponent<CanvasScaler>() 
