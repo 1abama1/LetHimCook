@@ -45,6 +45,7 @@ public class GameHUD : MonoBehaviour
     public GameObject          dialoguePanel;
     public TextMeshProUGUI     speakerNameText;
     public TextMeshProUGUI     dialogueBodyText;
+    public Image               portraitImage;
     public Transform           choiceButtonContainer;
     public Button              choiceButtonPrefab;
 
@@ -187,11 +188,25 @@ public class GameHUD : MonoBehaviour
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
     }
 
-    void ShowDialogueLine(string speakerName, string text)
+    void ShowDialogueLine(string speakerName, string text, Sprite portrait)
     {
         if (dialoguePanel    != null) dialoguePanel.SetActive(true);
         if (speakerNameText  != null) speakerNameText.text  = speakerName;
         if (dialogueBodyText != null) dialogueBodyText.text = text;
+
+        if (portraitImage != null)
+        {
+            if (portrait != null)
+            {
+                portraitImage.sprite = portrait;
+                portraitImage.gameObject.SetActive(true);
+            }
+            else
+            {
+                portraitImage.gameObject.SetActive(false);
+            }
+        }
+
         ClearChoiceButtons();
     }
 
