@@ -46,7 +46,7 @@ public class SceneBootstrap : MonoBehaviour
         else
         {
             CheckComponent<PlayerController>("PlayerController", player);
-            CheckComponent<NoiseEmitter>("NoiseEmitter",         player);
+
             CheckComponent<FootstepSystem>("FootstepSystem",     player);
             CheckComponent<FlashlightController>("FlashlightController", player);
             CheckComponent<MurderSystem>("MurderSystem",         player);

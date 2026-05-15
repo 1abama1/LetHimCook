@@ -3,16 +3,13 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Кольцевой индикатор заметности + шума игрока.
-/// Показывает фонарик (батарейка) и радиус шума.
+/// Кольцевой индикатор заметности игрока.
+/// Показывает фонарик (батарейка) и иконки состояния.
 /// Добавьте в Canvas рядом с GameHUD.
 /// </summary>
 public class StealthIndicator : MonoBehaviour
 {
-    [Header("Noise Ring")]
-    public Image   noiseRingFill;       // Image в режиме Filled, type=Radial360
-    public Color   silentColor  = new Color(0.2f, 0.8f, 0.3f);
-    public Color   noisyColor   = new Color(0.9f, 0.3f, 0.1f);
+
 
     [Header("State Icons")]
     public Image   sneakIcon;           // иконка кравается
@@ -35,12 +32,8 @@ public class StealthIndicator : MonoBehaviour
     public Color copSuspicionHigh = Color.red;
 
     private PlayerController     _player;
-    private NoiseEmitter         _noise;
     private FlashlightController _flashlight;
     private CopNPC               _cop;
-
-    // Кэшируем максимальный радиус для нормализации
-    private float _maxNoiseRadius = 5f;
 
     void Start()
     {
@@ -48,13 +41,7 @@ public class StealthIndicator : MonoBehaviour
         if (p != null)
         {
             _player     = p.GetComponent<PlayerController>();
-            _noise      = p.GetComponent<NoiseEmitter>();
             _flashlight = p.GetComponent<FlashlightController>();
-
-            if (_noise != null)
-                _maxNoiseRadius = _noise.sprintNoiseRadius > 0f
-                    ? _noise.sprintNoiseRadius
-                    : 5f;
         }
 
         _cop = FindFirstObjectByType<CopNPC>();
@@ -67,21 +54,12 @@ public class StealthIndicator : MonoBehaviour
 
     void Update()
     {
-        UpdateNoise();
         UpdateStateIcons();
         UpdateFlashlight();
         UpdateCopSuspicion();
     }
 
-    // ─── Шум ─────────────────────────────────────────────────────────────────
-    void UpdateNoise()
-    {
-        if (_noise == null || noiseRingFill == null) return;
 
-        float t = Mathf.Clamp01(_noise.CurrentNoiseRadius / _maxNoiseRadius);
-        noiseRingFill.fillAmount = t;
-        noiseRingFill.color      = Color.Lerp(silentColor, noisyColor, t);
-    }
 
     // ─── Иконки состояния ─────────────────────────────────────────────────────
     void UpdateStateIcons()
