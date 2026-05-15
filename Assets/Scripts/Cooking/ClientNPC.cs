@@ -317,6 +317,12 @@ public class ClientNPC : MonoBehaviour
 
         if (_patienceSliderGO != null) _patienceSliderGO.SetActive(true);
         if (_orderBubbleGO    != null) _orderBubbleGO.SetActive(true);
+
+        // Когда клиент подходит к окошку, он назначает свой рецепт глобальным
+        if (RecipeManager.Instance != null)
+        {
+            RecipeManager.Instance.AssignRecipe(wantedRecipe);
+        }
     }
 
     void TickPatience()

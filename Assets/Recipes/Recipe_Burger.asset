@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffd66928313eaa14290b66bc7440d66e, type: 3}
   m_Name: Recipe_Burger
   m_EditorClassIdentifier: Assembly-CSharp::RecipeData
-  dishName: Burger
-  dishSprite: {fileID: 0}
+  recipeName: Burga
+  icon: {fileID: 0}
   requiredIngredientNames:
   - Patty
   - Bun

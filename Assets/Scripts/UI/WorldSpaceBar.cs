@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(Canvas))]
 public class WorldSpaceBar : MonoBehaviour
 {
     private Slider slider;
@@ -9,6 +8,15 @@ public class WorldSpaceBar : MonoBehaviour
 
     void Awake()
     {
+        // Проверяем, есть ли RectTransform. На обычных префабах (Transform) 
+        // нельзя программно добавить Canvas, так как он требует RectTransform.
+        if (GetComponent<RectTransform>() == null)
+        {
+            Debug.LogError($"[WorldSpaceBar] Ошибка на {name}: Скрипт должен висеть на объекте с RectTransform (UI-объект).");
+            enabled = false;
+            return;
+        }
+
         SetupCanvas();
         CreateUI();
     }
@@ -16,6 +24,8 @@ public class WorldSpaceBar : MonoBehaviour
     void SetupCanvas()
     {
         Canvas canvas = GetComponent<Canvas>();
+        if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+        
         canvas.renderMode = RenderMode.WorldSpace;
 
         RectTransform rt = GetComponent<RectTransform>();

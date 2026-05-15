@@ -15,6 +15,10 @@ MonoBehaviour:
   ingredientName: Moldy Bun
   sprite: {fileID: 0}
   rotLevel: 85
+  cookedVersion: {fileID: 0}
+  requiredProcess: 0
   baseValue: 2
   tintColor: {r: 0.7411765, g: 0.7176471, b: 0.4196079, a: 1}
   rotParticlePrefab: {fileID: 0}
+  modelPrefab: {fileID: 0}
+  visualOffset: {x: 0, y: 0, z: -0.00927}

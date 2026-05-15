@@ -92,7 +92,7 @@ public class RecipeManager : MonoBehaviour
             // Capture recipe BEFORE clearing so caller can notify the right ClientNPC
             RecipeData matched = currentRecipe;
 
-            Debug.Log($"[RecipeManager] Dish '{matched.recipeName}' matched — serving!");
+            Debug.Log($"[RecipeManager] УСПЕХ! Блюдо '{matched.recipeName}' совпало. Награда начислена.");
             onDishCompleted?.Invoke(matched, hasSpoiled);
 
             int pay = matched.basePayment + (hasSpoiled ? matched.spoiledBonusPayment : 0);
@@ -104,7 +104,20 @@ public class RecipeManager : MonoBehaviour
             return matched; // Success — caller notifies ClientNPC
         }
 
-        Debug.Log("[RecipeManager] Submitted ingredients do not match the current order.");
+        // Подробная диагностика ошибки для консоли
+        string required = string.Join(", ", currentRecipe.requiredIngredientNames);
+        string submitted = submittedNames.Count > 0 ? string.Join(", ", submittedNames) : "пусто";
+
+        if (currentRecipe.requiredIngredientNames.Length != submittedNames.Count)
+        {
+            Debug.LogWarning($"[RecipeManager] ОТКАЗ: Неверное количество предметов! Рецепт '{currentRecipe.recipeName}' требует {currentRecipe.requiredIngredientNames.Length} инг. ({required}), а на тарелке {submittedNames.Count} ({submitted}).");
+        }
+        else
+        {
+            var missing = currentRecipe.requiredIngredientNames.Where(name => !submittedNames.Contains(name)).ToList();
+            Debug.LogWarning($"[RecipeManager] ОТКАЗ: Ошибка в составе! Рецепт: [{required}]. На тарелке: [{submitted}]. Не хватает: {string.Join(", ", missing)}.");
+        }
+
         return null; // Wrong dish
     }
 

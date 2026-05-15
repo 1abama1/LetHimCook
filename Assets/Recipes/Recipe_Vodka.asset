@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffd66928313eaa14290b66bc7440d66e, type: 3}
   m_Name: Recipe_Vodka
   m_EditorClassIdentifier: Assembly-CSharp::RecipeData
-  recipeName: 
+  recipeName: Vodka
   icon: {fileID: 0}
   requiredIngredientNames:
   - Vodka
   basePayment: 20
-  spoiledBonusPayment: 5
-  clientSatisfactionFresh: 90
-  clientSatisfactionSpoiled: 40
+  spoiledBonusPayment: 10
+  clientSatisfactionFresh: 65
+  clientSatisfactionSpoiled: 100
   cookTimeSeconds: 8

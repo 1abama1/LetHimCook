@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffd66928313eaa14290b66bc7440d66e, type: 3}
   m_Name: Recipe_Salad
   m_EditorClassIdentifier: Assembly-CSharp::RecipeData
-  dishName: Salad
-  dishSprite: {fileID: 0}
+  recipeName: Slad
+  icon: {fileID: 0}
   requiredIngredientNames:
-  - Herb
-  - Herb
+  - Tomato
+  - Cucumber
   basePayment: 15
   spoiledBonusPayment: 3
   clientSatisfactionFresh: 50

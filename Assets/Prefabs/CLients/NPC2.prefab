@@ -81,7 +81,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6ce2d55a57da2b42870e32d4bcbd294, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClientNPC
-  wantedRecipe: {fileID: 11400000, guid: dd24fec0f75575e46a2c5b2f49307d2a, type: 2}
+  wantedRecipe: {fileID: 0}
   patienceTime: 60
   moveSpeed: 2
   arrivalThreshold: 0.15

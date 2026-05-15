@@ -21,4 +21,6 @@ public class IngredientData : ScriptableObject
     public Color tintColor = Color.white;
     public GameObject rotParticlePrefab;
     public GameObject modelPrefab; // 3D модель или специфичный префаб для этого ингредиента
+    public Vector3 visualOffset;   // Смещение модели (например, для булочки Z = -0.00927)
+    public Vector3 visualRotation; // Поворот модели (в градусах)
 }

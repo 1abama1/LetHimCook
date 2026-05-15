@@ -16,6 +16,23 @@ public class Countertop : MonoBehaviour, IInteractable
 
     private GameObject _currentVisual;
 
+    void Start()
+    {
+        // Если тарелка назначена в инспекторе как префаб — создаем инстанс
+        if (storedPlate != null && !storedPlate.gameObject.scene.IsValid())
+        {
+            Plate instance = Instantiate(storedPlate);
+            PlacePlate(instance);
+        }
+        else if (storedPlate != null)
+        {
+            // Если это уже инстанс на сцене — просто привязываем
+            PlacePlate(storedPlate);
+        }
+
+        RefreshVisual();
+    }
+
     public void Interact(PlayerController player)
     {
         // ── ИГРОК ДЕРЖИТ ТАРЕЛКУ ───────────────────────────
@@ -42,6 +59,17 @@ public class Countertop : MonoBehaviour, IInteractable
         // ── ИГРОК ДЕРЖИТ ИНГРЕДИЕНТ ────────────────────────
         if (player.HeldIngredient != null)
         {
+            // ПРИОРИТЕТ: Попробовать положить в тарелку, которая стоит на столе
+            if (storedPlate != null)
+            {
+                if (storedPlate.TryAddIngredient(player.HeldIngredient))
+                {
+                    player.TakeIngredient();
+                    return;
+                }
+            }
+
+            // Иначе положить просто на стол (если он пуст)
             if (storedIngredient == null && storedPlate == null)
             {
                 storedIngredient = player.TakeIngredient();
@@ -83,13 +111,35 @@ public class Countertop : MonoBehaviour, IInteractable
     {
         if (_currentVisual) Destroy(_currentVisual);
 
-        if (storedIngredient != null && ingredientIconPrefab != null && itemAnchor != null)
+        if (storedIngredient != null && itemAnchor != null)
         {
-            _currentVisual = Instantiate(ingredientIconPrefab, itemAnchor.position,
-                                         Quaternion.identity, itemAnchor);
-            var sr = _currentVisual.GetComponent<SpriteRenderer>();
-            if (sr != null && storedIngredient.sprite != null)
-                sr.sprite = storedIngredient.sprite;
+            // Приоритет: собственная модель ингредиента → общий иконка-префаб
+            GameObject prefab = storedIngredient.modelPrefab != null
+                ? storedIngredient.modelPrefab
+                : ingredientIconPrefab;
+
+            if (prefab != null)
+            {
+                _currentVisual = Instantiate(prefab, itemAnchor.position, Quaternion.identity);
+                _currentVisual.transform.SetParent(itemAnchor, true);
+                _currentVisual.transform.localPosition += storedIngredient.visualOffset;
+                _currentVisual.transform.localRotation *= Quaternion.Euler(storedIngredient.visualRotation);
+
+                // Спрайт применяем только для иконка-префаба
+                if (prefab == ingredientIconPrefab)
+                {
+                    var sr = _currentVisual.GetComponent<SpriteRenderer>();
+                    if (sr != null && storedIngredient.sprite != null)
+                        sr.sprite = storedIngredient.sprite;
+                }
+
+                // Применяем tintColor
+                if (storedIngredient.tintColor != Color.white)
+                {
+                    foreach (var r in _currentVisual.GetComponentsInChildren<Renderer>())
+                        r.material.color = storedIngredient.tintColor;
+                }
+            }
         }
         // тарелка — GameObject самой тарелки и так виден
     }

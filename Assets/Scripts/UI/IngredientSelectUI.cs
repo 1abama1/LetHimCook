@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+using UnityEngine.InputSystem;
+
 /// <summary>
 /// Всплывающее меню выбора ингредиента из инвентаря.
 /// Открывается через IngredientCabinet.Interact().
@@ -28,7 +30,7 @@ public class IngredientSelectUI : MonoBehaviour
 
     void Update()
     {
-        if (IsOpen && Input.GetKeyDown(KeyCode.Escape))
+        if (IsOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             Close();
     }
 
@@ -225,7 +227,7 @@ public class IngredientSelectUI : MonoBehaviour
         var titleGo  = new GameObject("Title");
         titleGo.transform.SetParent(_panel.transform, false);
         var titleTmp = titleGo.AddComponent<TextMeshProUGUI>();
-        titleTmp.text      = "🛒  Выберите ингредиент";
+        titleTmp.text      = "ВЫБЕРИТЕ ИНГРЕДИЕНТ";
         titleTmp.fontSize  = 24f;
         titleTmp.fontStyle = FontStyles.Bold;
         titleTmp.alignment = TextAlignmentOptions.Center;

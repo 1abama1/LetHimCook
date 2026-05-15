@@ -15,6 +15,9 @@ MonoBehaviour:
   ingredientName: Stale Patty
   sprite: {fileID: 0}
   rotLevel: 70
+  cookedVersion: {fileID: 0}
+  requiredProcess: 2
   baseValue: 3
   tintColor: {r: 0.4196079, g: 0.5568628, b: 0.1372549, a: 1}
   rotParticlePrefab: {fileID: 0}
+  modelPrefab: {fileID: 5546137365737195193, guid: d92b24065230aff44acc5984fdc28643, type: 3}

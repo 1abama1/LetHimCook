@@ -178,10 +178,20 @@ public class PlayerController : MonoBehaviour
     public void GivePlate(Plate plate)
     {
         HeldPlate = plate;
-        if (plate != null && holdAnchor != null)
+        if (plate != null)
         {
-            plate.transform.SetParent(holdAnchor);
-            plate.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            if (holdAnchor != null)
+            {
+                plate.transform.SetParent(holdAnchor);
+                plate.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.Euler(90f, 0f, 0f));
+            }
+
+            // Отключаем физику на тарелке, пока она в руках
+            foreach (var col in plate.GetComponentsInChildren<Collider>())
+                col.enabled = false;
+            
+            var rb = plate.GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = true;
         }
         UpdateHoldVisual();
     }
@@ -193,6 +203,13 @@ public class PlayerController : MonoBehaviour
         if (plate != null)
         {
             plate.transform.SetParent(null);
+
+            // Возвращаем физику
+            foreach (var col in plate.GetComponentsInChildren<Collider>())
+                col.enabled = true;
+                
+            var rb = plate.GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = false;
         }
         UpdateHoldVisual();
         return plate;
@@ -215,11 +232,10 @@ public class PlayerController : MonoBehaviour
 
             if (prefabToSpawn != null)
             {
-                _currentIngredientVisual = Instantiate(
-                    prefabToSpawn,
-                    holdAnchor.position,
-                    Quaternion.identity,
-                    holdAnchor);
+                _currentIngredientVisual = Instantiate(prefabToSpawn, holdAnchor.position, Quaternion.identity);
+                _currentIngredientVisual.transform.SetParent(holdAnchor, true);
+                _currentIngredientVisual.transform.localPosition += _heldIngredient.visualOffset;
+                _currentIngredientVisual.transform.localRotation *= Quaternion.Euler(_heldIngredient.visualRotation);
 
                 // Настраиваем визуал только если используем общий префаб (спрайтовый)
                 if (prefabToSpawn == ingredientVisualPrefab)
@@ -234,6 +250,12 @@ public class PlayerController : MonoBehaviour
                     if (img != null && _heldIngredient.sprite != null)
                         img.sprite = _heldIngredient.sprite;
                 }
+
+                // ОТКЛЮЧАЕМ ФИЗИКУ ДЛЯ ПРЕДМЕТА В РУКАХ
+                foreach (var col in _currentIngredientVisual.GetComponentsInChildren<Collider>())
+                    col.enabled = false;
+                var rb = _currentIngredientVisual.GetComponent<Rigidbody>();
+                if (rb != null) rb.isKinematic = true;
             }
         }
         // Тарелка уже привязана через SetParent в GivePlate / TakePlate — ничего дополнительного не нужно.

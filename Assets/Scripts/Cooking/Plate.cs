@@ -66,15 +66,45 @@ public class Plate : MonoBehaviour, IInteractable
     // ── Иконки ────────────────────────────────────────────
     void SpawnIcon(IngredientData ing)
     {
-        if (ingredientIconPrefab == null || ingredientSlotRoot == null) return;
+        // Фолбек: если ingredientSlotRoot не назначен — кладём прямо на тарелку
+        Transform root = ingredientSlotRoot != null ? ingredientSlotRoot : transform;
+
+        // Приоритет: собственная модель ингредиента → общий иконка-префаб
+        GameObject prefab = ing.modelPrefab != null ? ing.modelPrefab : ingredientIconPrefab;
+
+        if (prefab == null)
+        {
+            Debug.LogWarning($"[Plate] SpawnIcon: нет modelPrefab и нет ingredientIconPrefab для {ing.ingredientName}. Назначь одно из двух!");
+            return;
+        }
 
         Vector3 offset = Vector3.up * 0.08f * _icons.Count;
-        GameObject go = Instantiate(ingredientIconPrefab,
-            ingredientSlotRoot.position + offset, Quaternion.identity, ingredientSlotRoot);
+        GameObject go = Instantiate(prefab, root.position + offset, Quaternion.identity);
+        go.transform.SetParent(root, true);
+        go.transform.localPosition += ing.visualOffset;
+        go.transform.localRotation *= Quaternion.Euler(ing.visualRotation);
 
-        SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
-        if (sr != null && ing.sprite != null) sr.sprite = ing.sprite;
+        // Спрайт применяем только для иконка-префаба (не для 3D модели)
+        if (prefab == ingredientIconPrefab)
+        {
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr != null && ing.sprite != null) sr.sprite = ing.sprite;
+        }
 
+        // Применяем tintColor если есть Renderer (работает и для 3D и для спрайтов)
+        if (ing.tintColor != Color.white)
+        {
+            foreach (var r in go.GetComponentsInChildren<Renderer>())
+                r.material.color = ing.tintColor;
+        }
+
+        // ОТКЛЮЧАЕМ ФИЗИКУ ДЛЯ МОДЕЛИ НА ТАРЕЛКЕ
+        foreach (var col in go.GetComponentsInChildren<Collider>())
+            col.enabled = false;
+        var rb = go.GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+
+        Debug.Log($"[Plate] SpawnIcon: {ing.ingredientName}, prefab={prefab.name}, root={root.name}");
         _icons.Add(go);
     }
 }
