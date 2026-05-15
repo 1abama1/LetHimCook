@@ -23,6 +23,14 @@ public class PlayerController : MonoBehaviour
     private IngredientData _heldIngredient;
     public  IngredientData HeldIngredient => _heldIngredient;
 
+    public Plate HeldPlate { get; private set; }
+
+    [Header("Hold Settings")]
+    public Transform holdAnchor;            // якорь над головой
+    public GameObject ingredientVisualPrefab; // префаб визуала ингредиента (SpriteRenderer или 3D)
+
+    private GameObject _currentIngredientVisual;
+
     private PlayerInput  _playerInput;
     private InputAction  _moveAction;
     private InputAction  _sprintAction;
@@ -102,9 +110,10 @@ public class PlayerController : MonoBehaviour
     void UpdateAnimator()
     {
         if (_animator == null) return;
-        _animator.SetFloat("Speed",     _moveInput.magnitude);
-        _animator.SetBool("IsSneaking", _isSneaking);
-        _animator.SetBool("IsHiding",   _isHiding);
+        _animator.SetFloat("Speed",      _moveInput.magnitude);
+        _animator.SetBool("IsSneaking",  _isSneaking);
+        _animator.SetBool("IsHiding",    _isHiding);
+        _animator.SetBool("IsCarrying",  HeldIngredient != null || HeldPlate != null);
     }
 
     public void TryInteract()
@@ -150,13 +159,84 @@ public class PlayerController : MonoBehaviour
     public bool IsSprinting => _isSprinting;
     public bool IsMoving    => _moveInput.sqrMagnitude > 0.01f;
 
-    public void GiveIngredient(IngredientData ingredient) => _heldIngredient = ingredient;
+    // ── Ингредиент ──────────────────────────────────────────────
+    public void GiveIngredient(IngredientData ing)
+    {
+        _heldIngredient = ing;
+        UpdateHoldVisual();
+    }
 
     public IngredientData TakeIngredient()
     {
-        IngredientData tmp = _heldIngredient;
-        _heldIngredient    = null;
-        return tmp;
+        var ing = _heldIngredient;
+        _heldIngredient = null;
+        UpdateHoldVisual();
+        return ing;
+    }
+
+    // ── Тарелка ────────────────────────────────────────────────
+    public void GivePlate(Plate plate)
+    {
+        HeldPlate = plate;
+        if (plate != null && holdAnchor != null)
+        {
+            plate.transform.SetParent(holdAnchor);
+            plate.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+        }
+        UpdateHoldVisual();
+    }
+
+    public Plate TakePlate()
+    {
+        var plate = HeldPlate;
+        HeldPlate = null;
+        if (plate != null)
+        {
+            plate.transform.SetParent(null);
+        }
+        UpdateHoldVisual();
+        return plate;
+    }
+
+    void UpdateHoldVisual()
+    {
+        // 1. Уничтожаем старый визуал ингредиента
+        if (_currentIngredientVisual != null)
+        {
+            Destroy(_currentIngredientVisual);
+            _currentIngredientVisual = null;
+        }
+
+        // 2. Создаём новый визуал, если игрок держит ингредиент
+        if (_heldIngredient != null && holdAnchor != null)
+        {
+            // Если у ингредиента есть своя модель — используем её, иначе общий префаб
+            GameObject prefabToSpawn = _heldIngredient.modelPrefab != null ? _heldIngredient.modelPrefab : ingredientVisualPrefab;
+
+            if (prefabToSpawn != null)
+            {
+                _currentIngredientVisual = Instantiate(
+                    prefabToSpawn,
+                    holdAnchor.position,
+                    Quaternion.identity,
+                    holdAnchor);
+
+                // Настраиваем визуал только если используем общий префаб (спрайтовый)
+                if (prefabToSpawn == ingredientVisualPrefab)
+                {
+                    // Поддержка 2D-спрайтов
+                    var sr = _currentIngredientVisual.GetComponent<SpriteRenderer>();
+                    if (sr != null && _heldIngredient.sprite != null)
+                        sr.sprite = _heldIngredient.sprite;
+
+                    // Поддержка UI-Image (Canvas в world-space)
+                    var img = _currentIngredientVisual.GetComponentInChildren<UnityEngine.UI.Image>();
+                    if (img != null && _heldIngredient.sprite != null)
+                        img.sprite = _heldIngredient.sprite;
+                }
+            }
+        }
+        // Тарелка уже привязана через SetParent в GivePlate / TakePlate — ничего дополнительного не нужно.
     }
 
     void OnDrawGizmosSelected()

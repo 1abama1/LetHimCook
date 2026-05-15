@@ -2,143 +2,169 @@ using UnityEngine;
 using UnityEngine.Events;
 using System.Collections;
 
+/// <summary>
+/// Станция обработки (нарезка / жарка / варка).
+/// Игрок кладёт ингредиент → идёт автоматический кук → забирает.
+/// Если держит тарелку → готовый ингредиент ложится прямо на неё.
+/// </summary>
 public class CookingStation : MonoBehaviour, IInteractable
 {
+    [Header("Station")]
     public string stationName = "Cutting Board";
     public IngredientData.ProcessType stationType;
-    public float interactRange = 1.5f;
 
     [Header("UI")]
     public WorldSpaceBar progressBar;
-    public Vector3 progressBarOffset = new Vector3(0, 1.2f, 0);
-    
-    public IngredientData currentIngredient;
-    private bool _isCooking;
-    private float _cookTimer;
-    private float _cookDuration;
+    public Vector3       progressBarOffset = new Vector3(0, 1.2f, 0);
 
+    [Header("Events")]
     public UnityEvent<IngredientData> onIngredientPlaced;
     public UnityEvent<IngredientData> onIngredientReady;
-    public UnityEvent onIngredientHidden;
+    public UnityEvent                 onIngredientTaken;
 
-    private bool _ingredientHidden;
+    // ── State ──────────────────────────────────────────────
+    public IngredientData CurrentIngredient { get; private set; }
+    public bool           IsCooking         { get; private set; }
+    public bool           IsReady           { get; private set; }
+    public float          CookProgress      => IsCooking ? 1f - (_timer / _duration) : (IsReady ? 1f : 0f);
+
+    private float _timer;
+    private float _duration;
+    private bool  _ingredientHidden;
     private InspectorAI _inspector;
 
+    // ── Init ───────────────────────────────────────────────
     void Start()
     {
         _inspector = FindFirstObjectByType<InspectorAI>();
-        
+
         if (progressBar == null)
         {
-            GameObject barGo = new GameObject($"{stationName}_ProgressBar");
-            barGo.transform.SetParent(transform);
-            barGo.transform.localPosition = progressBarOffset;
-            progressBar = barGo.AddComponent<WorldSpaceBar>();
+            var go = new GameObject($"{stationName}_Bar");
+            go.transform.SetParent(transform);
+            go.transform.localPosition = progressBarOffset;
+            progressBar = go.AddComponent<WorldSpaceBar>();
         }
     }
 
+    // ── IInteractable ──────────────────────────────────────
     public void Interact(PlayerController player)
     {
+        // ── Игрок держит тарелку ──────────────────────────
+        if (player.HeldPlate != null)
+        {
+            if (IsReady && CurrentIngredient != null)
+            {
+                if (player.HeldPlate.TryAddIngredient(CurrentIngredient))
+                {
+                    CurrentIngredient = null;
+                    IsReady = false;
+                    ResetBar();
+                    onIngredientTaken?.Invoke();
+                }
+            }
+            return;
+        }
+
+        // ── Игрок держит ингредиент ───────────────────────
         if (player.HeldIngredient != null)
         {
-            PlaceIngredient(player.TakeIngredient());
+            if (!IsCooking && CurrentIngredient == null)
+                PlaceIngredient(player.TakeIngredient());
+            return;
         }
-        else if (currentIngredient != null && !_isCooking)
+
+        // ── Пустые руки ───────────────────────────────────
+        if (IsReady && CurrentIngredient != null)
         {
-            player.GiveIngredient(currentIngredient);
-            Debug.Log($"[Cooking] Player picked up {currentIngredient.ingredientName} from {stationName}");
-            currentIngredient = null;
+            player.GiveIngredient(CurrentIngredient);
+            CurrentIngredient = null;
+            IsReady = false;
+            ResetBar();
+            onIngredientTaken?.Invoke();
+            return;
+        }
+
+        // Можно подобрать ещё не готовый ингредиент (отмена готовки)
+        if (!IsCooking && CurrentIngredient != null)
+        {
+            player.GiveIngredient(CurrentIngredient);
+            CurrentIngredient = null;
+            ResetBar();
         }
     }
 
+    // ── Placement ─────────────────────────────────────────
     public bool PlaceIngredient(IngredientData ingredient)
     {
-        if (_isCooking || ingredient == null) return false;
-        
+        if (IsCooking || ingredient == null) return false;
+
         if (ingredient.requiredProcess != stationType)
         {
-            Debug.Log($"[Cooking] {ingredient.ingredientName} cannot be processed at {stationName} (Needs {ingredient.requiredProcess})");
+            Debug.Log($"[{stationName}] {ingredient.ingredientName} нужна обработка: {ingredient.requiredProcess}");
             return false;
         }
 
-        currentIngredient  = ingredient;
-        _ingredientHidden  = false;
-        // Use ingredient's own timing, NOT the current recipe (which could change mid-cook).
-        _cookDuration      = ingredient.cookedVersion != null ? 8f : 5f;
+        CurrentIngredient = ingredient;
+        _ingredientHidden = false;
+        IsReady           = false;
+        _duration         = ingredient.cookedVersion != null ? 8f : 5f;
 
-        Debug.Log($"[Cooking] {ingredient.ingredientName} placed on {stationName}. Cooking started!");
+        Debug.Log($"[{stationName}] Начинаем готовить {ingredient.ingredientName}");
         onIngredientPlaced?.Invoke(ingredient);
         AudioManager.Instance?.Play("cook_start");
         StartCoroutine(CookRoutine());
         return true;
     }
 
+    // ── Cook loop ─────────────────────────────────────────
     IEnumerator CookRoutine()
     {
-        _isCooking  = true;
-        _cookTimer  = _cookDuration;
+        IsCooking = true;
+        _timer    = _duration;
 
-        while (_cookTimer > 0)
+        while (_timer > 0f)
         {
-            // Guard: player may have picked up the ingredient during cooking
-            if (currentIngredient == null)
-            {
-                _isCooking = false;
-                if (progressBar != null) progressBar.UpdateProgress(0f);
-                yield break;
-            }
+            if (CurrentIngredient == null) { StopCooking(); yield break; }
 
-            if (!_ingredientHidden && currentIngredient.IsSpoiled)
-            {
+            if (!_ingredientHidden && CurrentIngredient.IsSpoiled)
                 if (_inspector != null && _inspector.IsWatchingStation(this))
                     _inspector.AddSuspicion(15f * Time.deltaTime);
-            }
-            _cookTimer -= Time.deltaTime;
 
-            if (progressBar != null)
-            {
-                progressBar.UpdateProgress(CookProgress);
-            }
-
+            _timer -= Time.deltaTime;
+            progressBar?.UpdateProgress(CookProgress);
             yield return null;
         }
 
-        _isCooking = false;
+        IsCooking = false;
+        if (CurrentIngredient == null) { ResetBar(); yield break; }
 
-        // Guard: ingredient could have been removed on the very last frame
-        if (currentIngredient == null)
-        {
-            if (progressBar != null) progressBar.UpdateProgress(0f);
-            yield break;
-        }
+        // Трансформация
+        if (CurrentIngredient.cookedVersion != null)
+            CurrentIngredient = CurrentIngredient.cookedVersion;
 
-        if (currentIngredient.cookedVersion != null)
-            currentIngredient = currentIngredient.cookedVersion;
-
-        if (progressBar != null) progressBar.UpdateProgress(0f);
-
-        Debug.Log($"[Cooking] {currentIngredient.ingredientName} is READY on {stationName}!");
-        onIngredientReady?.Invoke(currentIngredient);
+        IsReady = true;
+        progressBar?.UpdateProgress(1f);
+        Debug.Log($"[{stationName}] {CurrentIngredient.ingredientName} готово!");
+        onIngredientReady?.Invoke(CurrentIngredient);
         AudioManager.Instance?.Play("cook_done");
     }
 
+    void StopCooking() { IsCooking = false; ResetBar(); }
+    void ResetBar()    { progressBar?.UpdateProgress(0f); }
+
+    // ── Inspector helpers ──────────────────────────────────
     public void HideIngredient()
     {
-        if (currentIngredient == null || !currentIngredient.IsSpoiled) return;
+        if (CurrentIngredient == null || !CurrentIngredient.IsSpoiled) return;
         _ingredientHidden = true;
-        Debug.Log($"[Cooking] Hid spoiled {currentIngredient.ingredientName} from Inspector!");
-        onIngredientHidden?.Invoke();
     }
-
     public void RevealIngredient() => _ingredientHidden = false;
-
     public bool IsIngredientHidden => _ingredientHidden;
-    public bool IsCooking          => _isCooking;
-    public float CookProgress      => _isCooking ? 1f - (_cookTimer / _cookDuration) : 0f;
 
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, interactRange);
+        Gizmos.DrawWireSphere(transform.position, 1.5f);
     }
 }

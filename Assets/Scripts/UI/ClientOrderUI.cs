@@ -103,7 +103,7 @@ public class ClientOrderUI : MonoBehaviour
     void Start()
     {
         if (_client != null && _client.wantedRecipe != null)
-            _dishLabel.text = _client.wantedRecipe.dishName;
+            _dishLabel.text = _client.wantedRecipe.recipeName;
     }
 
     void Update()

@@ -41,7 +41,7 @@ public class RecipeUI : MonoBehaviour
     void OnRecipeAssigned(RecipeData recipe)
     {
         if (recipePanel != null) recipePanel.SetActive(true);
-        if (dishNameText != null) dishNameText.text = recipe.dishName;
+        if (dishNameText != null) dishNameText.text = recipe.recipeName;
 
         // Очищаем строки
         foreach (var row in _rows) Destroy(row);

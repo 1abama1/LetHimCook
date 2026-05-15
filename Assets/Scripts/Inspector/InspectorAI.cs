@@ -89,8 +89,8 @@ public class InspectorAI : MonoBehaviour
         foreach (var station in _stations)
         {
             if (!IsWatchingStation(station)) continue;
-            if (station.currentIngredient != null
-                && station.currentIngredient.IsSpoiled
+            if (station.CurrentIngredient != null
+                && station.CurrentIngredient.IsSpoiled
                 && !station.IsIngredientHidden)
             {
                 AddSuspicion(20f * Time.deltaTime);

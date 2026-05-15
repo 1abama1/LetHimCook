@@ -32,11 +32,13 @@ public class CopNPC : MonoBehaviour
     private float     _suspicionTimer;
     private bool      _isWaiting;
     private FlashlightController _playerFlashlight;
+    private Animator             _animator;
 
 
 
     void Awake()
     {
+        _animator = GetComponentInChildren<Animator>();
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p)
         {
@@ -47,6 +49,12 @@ public class CopNPC : MonoBehaviour
 
     void Update()
     {
+        if (_animator != null)
+        {
+            bool isMoving = (_state == CopState.Patrol && !_isWaiting) || (_state == CopState.Chase);
+            _animator.SetBool("IsWalking", isMoving);
+        }
+
         switch (_state)
         {
             case CopState.Patrol:     UpdatePatrol();     break;
@@ -76,6 +84,9 @@ public class CopNPC : MonoBehaviour
     {
         if (CanSeePlayer())
         {
+            if (_suspicionTimer == 0f && _animator != null)
+                _animator.SetTrigger("CopCheck");
+
             _suspicionTimer += Time.deltaTime;
             if (_suspicionTimer >= suspicionBuildTime)
             {
@@ -110,6 +121,8 @@ public class CopNPC : MonoBehaviour
     void Arrest()
     {
         _state = CopState.Arrest;
+        if (_animator != null) _animator.SetTrigger("Attack");
+        
         onArrestPlayer?.Invoke();
         GameManager.Instance?.TriggerArrest();
     }
@@ -135,10 +148,14 @@ public class CopNPC : MonoBehaviour
 
     void MoveTowards(Vector3 target, float speed)
     {
-        Vector3 dir = (target - transform.position);
-        dir.y = 0f;
+        // Создаем целевую точку на той же высоте, что и коп сейчас, 
+        // чтобы он не пытался «нырнуть» к ногам игрока.
+        Vector3 targetAtSameHeight = new Vector3(target.x, transform.position.y, target.z);
+
+        Vector3 dir = (targetAtSameHeight - transform.position);
         if (dir.sqrMagnitude > 0.01f) transform.forward = dir.normalized;
-        transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+
+        transform.position = Vector3.MoveTowards(transform.position, targetAtSameHeight, speed * Time.deltaTime);
     }
 
     void TransitionTo(CopState newState) => _state = newState;
