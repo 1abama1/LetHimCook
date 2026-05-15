@@ -3,8 +3,8 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Cooking/Recipe")]
 public class RecipeData : ScriptableObject
 {
-    public string dishName;
-    public Sprite dishSprite;
+    public string recipeName;
+    public Sprite icon;
 
     public string[] requiredIngredientNames;
 

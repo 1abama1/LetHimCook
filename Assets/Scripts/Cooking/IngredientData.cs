@@ -20,4 +20,5 @@ public class IngredientData : ScriptableObject
     public int baseValue = 5;
     public Color tintColor = Color.white;
     public GameObject rotParticlePrefab;
+    public GameObject modelPrefab; // 3D модель или специфичный префаб для этого ингредиента
 }

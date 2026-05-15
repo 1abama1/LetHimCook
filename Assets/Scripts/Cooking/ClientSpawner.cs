@@ -1,24 +1,40 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
 
+/// <summary>
+/// Спавнит клиентов и управляет очередью к окошку.
+///
+/// Точка 1 (spawnPoint)  — место появления
+/// Точка 2 (windowPoint) — окошко, куда подходит первый в очереди
+/// Точка 3 (exitPoint)   — точка выхода после обслуживания / злого ухода
+/// </summary>
 public class ClientSpawner : MonoBehaviour
 {
-    [Header("Settings")]
-    public GameObject clientPrefab;
-    public List<Transform> tableSpawnPoints;
+    [Header("Points")]
+    public Transform spawnPoint;   // точка 1 — место спавна
+    public Transform windowPoint;  // точка 2 — окошко выдачи
+    public Transform exitPoint;    // точка 3 — выход
+
+    [Header("Queue Settings")]
+    [Tooltip("Расстояние между клиентами в очереди")]
+    public float queueSpacing = 1.2f;
+
+    [Header("Spawn Settings")]
+    public List<GameObject> clientPrefabs = new List<GameObject>();
     public float spawnInterval = 15f;
-    public int maxClients = 3;
+    public int maxClients = 6;
+
+    // Очередь: [0] — у окошка, [1],[2]... — стоят сзади
+    private readonly List<ClientNPC> _queue = new List<ClientNPC>();
 
     private float _spawnTimer;
-    private List<GameObject> _activeClients = new List<GameObject>();
     private bool _isDayPhase;
 
+    // ──────────────────────────────────────────────────────────────
     void Start()
     {
         if (GameManager.Instance != null)
         {
-            // Подписываемся на смену фаз
             GameManager.Instance.onDayBegin.AddListener(OnDayBegin);
             GameManager.Instance.onNightBegin.AddListener(OnNightBegin);
             _isDayPhase = GameManager.Instance.currentPhase == GamePhase.Day;
@@ -30,45 +46,95 @@ public class ClientSpawner : MonoBehaviour
     {
         if (!_isDayPhase) return;
 
-        // Очищаем список от ушедших/уничтоженных клиентов
-        _activeClients.RemoveAll(item => item == null);
+        // Чистим уничтоженных клиентов (ушли злые или Destroy после подачи)
+        int before = _queue.Count;
+        _queue.RemoveAll(c => c == null);
+        if (_queue.Count != before)
+            RefreshQueuePositions();
 
-        if (_activeClients.Count >= maxClients) return;
+        if (_queue.Count >= maxClients) return;
 
         _spawnTimer -= Time.deltaTime;
-        if (_spawnTimer <= 0)
+        if (_spawnTimer <= 0f)
         {
             SpawnClient();
             _spawnTimer = spawnInterval;
         }
     }
 
+    // ──────────────────────────────────────────────────────────────
     void SpawnClient()
     {
-        if (tableSpawnPoints.Count == 0 || clientPrefab == null) return;
+        if (clientPrefabs == null || clientPrefabs.Count == 0 || spawnPoint == null) return;
 
-        // Pick a free spawn point (not already occupied by an active client)
-        Transform spawnPoint = tableSpawnPoints
-            .Where(t => !_activeClients.Any(c => c != null &&
-                   Vector3.Distance(c.transform.position, t.position) < 0.5f))
-            .OrderBy(_ => Random.value)
-            .FirstOrDefault();
+        // Выбираем случайный префаб из списка
+        GameObject prefab = clientPrefabs[Random.Range(0, clientPrefabs.Count)];
+        
+        // Защита от пустых слотов (None) в инспекторе
+        if (prefab == null) return;
 
-        if (spawnPoint == null) return; // All tables occupied
+        GameObject go = Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
+        ClientNPC npc = go.GetComponent<ClientNPC>();
+        if (npc == null) { Destroy(go); return; }
 
-        GameObject newClient = Instantiate(clientPrefab, spawnPoint.position, spawnPoint.rotation);
-        _activeClients.Add(newClient);
+        npc.Init(this);
+        _queue.Add(npc);
+        RefreshQueuePositions();
+
+        // Если первый — сразу идёт к окошку
+        if (_queue.Count == 1)
+            npc.GoToWindow();
     }
+
+    // ──────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Вызывается ClientNPC когда клиент покидает очередь
+    /// (получил еду или ушёл злым).
+    /// </summary>
+    public void OnClientLeft(ClientNPC client)
+    {
+        _queue.Remove(client);
+        RefreshQueuePositions();
+
+        // Следующий в очереди подходит к окошку
+        if (_queue.Count > 0 && _queue[0] != null)
+            _queue[0].GoToWindow();
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Пересчитывает целевые позиции всех стоящих клиентов.
+    /// </summary>
+    void RefreshQueuePositions()
+    {
+        if (windowPoint == null) return;
+
+        // Строим очередь "назад" от окошка вдоль -forward
+        Vector3 back = -windowPoint.forward;
+
+        for (int i = 0; i < _queue.Count; i++)
+        {
+            if (_queue[i] == null) continue;
+
+            Vector3 target = windowPoint.position + back * (i * queueSpacing);
+            // isFirst == true только если i==0 И NPC уже получил команду GoToWindow,
+            // иначе он просто стоит на позиции в очереди
+            _queue[i].SetQueueTarget(target, i == 0);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    public Transform WindowPoint => windowPoint;
+    public Transform ExitPoint   => exitPoint;
 
     void OnDayBegin()
     {
         _isDayPhase = true;
-        _spawnTimer = spawnInterval; // Сбрасываем таймер в начале дня
+        _spawnTimer = spawnInterval;
     }
 
     void OnNightBegin()
     {
         _isDayPhase = false;
-        // По желанию можно заставить всех оставшихся клиентов уйти
     }
 }

@@ -15,6 +15,9 @@ MonoBehaviour:
   ingredientName: Bun
   sprite: {fileID: 0}
   rotLevel: 5
+  cookedVersion: {fileID: 0}
+  requiredProcess: 0
   baseValue: 8
   tintColor: {r: 0.9568628, g: 0.6431373, b: 0.3764706, a: 1}
   rotParticlePrefab: {fileID: 0}
+  modelPrefab: {fileID: 5717664143314005053, guid: 9fd0f3d89e2b6a54f8750a6f677f8148, type: 3}

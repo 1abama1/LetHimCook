@@ -34,7 +34,7 @@ public class RecipeManager : MonoBehaviour
         currentRecipe = recipe;
         _addedIngredients.Clear();
         _usedSpoiled = false;
-        Debug.Log($"[RecipeManager] Assigned new order: {recipe.dishName}");
+        Debug.Log($"[RecipeManager] Assigned new order: {recipe.recipeName}");
         onRecipeAssigned?.Invoke(recipe);
     }
 
@@ -92,7 +92,7 @@ public class RecipeManager : MonoBehaviour
             // Capture recipe BEFORE clearing so caller can notify the right ClientNPC
             RecipeData matched = currentRecipe;
 
-            Debug.Log($"[RecipeManager] Dish '{matched.dishName}' matched — serving!");
+            Debug.Log($"[RecipeManager] Dish '{matched.recipeName}' matched — serving!");
             onDishCompleted?.Invoke(matched, hasSpoiled);
 
             int pay = matched.basePayment + (hasSpoiled ? matched.spoiledBonusPayment : 0);
