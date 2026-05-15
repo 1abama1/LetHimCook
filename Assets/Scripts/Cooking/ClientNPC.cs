@@ -42,6 +42,9 @@ public class ClientNPC : MonoBehaviour
         }
     }
 
+    public float PatiencePercent => Mathf.Clamp01(currentPatience / patienceTime);
+    public RecipeData WantedRecipe => wantedRecipe;
+
     public void ReceiveDish(RecipeData cookedRecipe, bool usedSpoiled)
     {
         if (cookedRecipe == wantedRecipe)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 public class ClientSpawner : MonoBehaviour
 {
@@ -46,8 +47,14 @@ public class ClientSpawner : MonoBehaviour
     {
         if (tableSpawnPoints.Count == 0 || clientPrefab == null) return;
 
-        // Выбираем случайную точку для спавна (можно доработать, чтобы искать только свободные столы)
-        Transform spawnPoint = tableSpawnPoints[Random.Range(0, tableSpawnPoints.Count)];
+        // Pick a free spawn point (not already occupied by an active client)
+        Transform spawnPoint = tableSpawnPoints
+            .Where(t => !_activeClients.Any(c => c != null &&
+                   Vector3.Distance(c.transform.position, t.position) < 0.5f))
+            .OrderBy(_ => Random.value)
+            .FirstOrDefault();
+
+        if (spawnPoint == null) return; // All tables occupied
 
         GameObject newClient = Instantiate(clientPrefab, spawnPoint.position, spawnPoint.rotation);
         _activeClients.Add(newClient);

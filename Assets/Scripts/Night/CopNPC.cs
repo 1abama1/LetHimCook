@@ -31,11 +31,18 @@ public class CopNPC : MonoBehaviour
     private Transform _player;
     private float     _suspicionTimer;
     private bool      _isWaiting;
+    private FlashlightController _playerFlashlight;
+
+
 
     void Awake()
     {
         GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p) _player = p.transform;
+        if (p)
+        {
+            _player          = p.transform;
+            _playerFlashlight = p.GetComponent<FlashlightController>();
+        }
     }
 
     void Update()
@@ -111,12 +118,20 @@ public class CopNPC : MonoBehaviour
     {
         if (_player == null) return false;
         Vector3 toPlayer = _player.position - transform.position;
-        if (toPlayer.magnitude > visionRange) return false;
-        if (Vector3.Angle(transform.forward, toPlayer) > visionAngle) return false;
+
+        // Фонарик расширяет эффективный радиус зрения
+        float mult   = _playerFlashlight != null ? _playerFlashlight.DetectionMult : 1f;
+        float range  = visionRange * mult;
+        float angle  = visionAngle;  // угол не меняем — меняем дальность
+
+        if (toPlayer.magnitude > range) return false;
+        if (Vector3.Angle(transform.forward, toPlayer) > angle) return false;
         if (Physics.Raycast(transform.position, toPlayer.normalized, toPlayer.magnitude, obstacleLayer))
             return false;
         return true;
     }
+
+
 
     void MoveTowards(Vector3 target, float speed)
     {

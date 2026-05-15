@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 using TMPro;
 using System.Collections.Generic;
 
@@ -32,6 +33,14 @@ public class GameHUD : MonoBehaviour
     public Slider     stealthKillSlider;
     public GameObject stealthKillUI;
 
+    [Header("Flashlight Battery")]
+    public Slider             batterySlider;
+    public Image              batteryFill;
+    public TextMeshProUGUI    batteryText;
+    public Color              batteryFullColor = new Color(0.3f, 0.9f, 0.4f);
+    public Color              batteryLowColor  = new Color(0.9f, 0.2f, 0.1f);
+    public GameObject         flashlightBatteryGroup; // вся группа: скрывается днём
+
     [Header("Dialogue")]
     public GameObject          dialoguePanel;
     public TextMeshProUGUI     speakerNameText;
@@ -39,12 +48,22 @@ public class GameHUD : MonoBehaviour
     public Transform           choiceButtonContainer;
     public Button              choiceButtonPrefab;
 
-    private MurderSystem   _murderSystem;
-    private List<Button>   _choiceButtons = new List<Button>();
+    private MurderSystem          _murderSystem;
+    private FlashlightController  _flashlight;
+    private List<Button>          _choiceButtons = new List<Button>();
 
     void Start()
     {
         _murderSystem = FindFirstObjectByType<MurderSystem>();
+
+        // Фонарик
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        if (p != null)
+        {
+            _flashlight = p.GetComponent<FlashlightController>();
+            if (_flashlight != null)
+                _flashlight.onBatteryChanged.AddListener(UpdateBattery);
+        }
 
         if (PlayerEconomy.Instance != null)
         {
@@ -69,10 +88,20 @@ public class GameHUD : MonoBehaviour
             DialogueSystem.Instance.onDialogueEnd.AddListener(HideDialogue);
         }
 
+        // Подписываемся на смену фаз — батарейка видна только ночью
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.onNightBegin.AddListener(() => SetBatteryGroupVisible(true));
+            GameManager.Instance.onDayBegin.AddListener(()   => SetBatteryGroupVisible(false));
+        }
+
         UpdateMoney(PlayerEconomy.Instance?.Money ?? 0);
         UpdateSuspicion(0f);
         UpdateReputation(RestaurantReputation.Instance?.reputation ?? 50f);
+        UpdateBattery(1f);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        bool isNight = GameManager.Instance?.currentPhase == GamePhase.Night;
+        SetBatteryGroupVisible(isNight);
         HideDialogue();
     }
 
@@ -92,6 +121,17 @@ public class GameHUD : MonoBehaviour
             float prog = _murderSystem.StealthKillProgress;
             stealthKillUI.SetActive(prog > 0.01f);
             if (stealthKillSlider != null) stealthKillSlider.value = prog;
+        }
+
+        // Advance dialogue on left click or Space (only when no choices are shown)
+        if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsActive)
+        {
+            bool clicked = Mouse.current?.leftButton.wasPressedThisFrame    ?? false;
+            bool spaced  = Keyboard.current?.spaceKey.wasPressedThisFrame   ?? false;
+            if (_choiceButtons.Count == 0 && (clicked || spaced))
+            {
+                DialogueSystem.Instance.AdvanceLine();
+            }
         }
     }
 
@@ -120,6 +160,20 @@ public class GameHUD : MonoBehaviour
             suspicionFill.color = Color.Lerp(lowSuspicionColor, highSuspicionColor, value / 100f);
     }
 
+    void UpdateBattery(float percent)
+    {
+        if (batterySlider != null) batterySlider.value = percent;
+        if (batteryFill   != null)
+            batteryFill.color = Color.Lerp(batteryLowColor, batteryFullColor, percent);
+        if (batteryText   != null)
+            batteryText.text = $"{Mathf.RoundToInt(percent * 100f)}%";
+    }
+
+    void SetBatteryGroupVisible(bool visible)
+    {
+        if (flashlightBatteryGroup != null) flashlightBatteryGroup.SetActive(visible);
+    }
+
     void UpdateReputation(float value)
     {
         float t = value / 100f;
@@ -143,13 +197,30 @@ public class GameHUD : MonoBehaviour
 
     void ShowChoices(List<DialogueChoice> choices)
     {
+        if (dialoguePanel != null) dialoguePanel.SetActive(true);
         ClearChoiceButtons();
         if (choiceButtonPrefab == null || choiceButtonContainer == null) return;
         for (int i = 0; i < choices.Count; i++)
         {
             int idx = i;
             Button btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
-            btn.GetComponentInChildren<TextMeshProUGUI>().text = choices[i].buttonLabel;
+            btn.gameObject.SetActive(true);
+
+            RectTransform rt = btn.GetComponent<RectTransform>();
+            rt.anchorMin        = new Vector2(0f, 0.5f);
+            rt.anchorMax        = new Vector2(1f, 0.5f);
+            rt.offsetMin        = new Vector2(0f, rt.offsetMin.y);
+            rt.offsetMax        = new Vector2(0f, rt.offsetMax.y);
+            rt.sizeDelta        = new Vector2(0f, rt.sizeDelta.y > 0 ? rt.sizeDelta.y : 40f);
+
+            TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null)
+            {
+                label.text         = choices[i].buttonLabel;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Ellipsis;
+            }
+
             btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(idx));
             _choiceButtons.Add(btn);
         }

@@ -145,8 +145,10 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public bool IsHiding  => _isHiding;
-    public bool IsSneaking => _isSneaking;
+    public bool IsHiding   => _isHiding;
+    public bool IsSneaking  => _isSneaking;
+    public bool IsSprinting => _isSprinting;
+    public bool IsMoving    => _moveInput.sqrMagnitude > 0.01f;
 
     public void GiveIngredient(IngredientData ingredient) => _heldIngredient = ingredient;
 
