@@ -14,17 +14,14 @@ public class StoryManager : MonoBehaviour
     public static StoryManager Instance { get; private set; }
 
     [Header("Debt Settings")]
-    public int totalDebt      = 1500;
+    public int totalDebt      = 1000;
     public int totalDays      = 3;
 
     [Header("Backstory Text")]
     [TextArea(4, 12)]
     public string backstoryText = "Ты задолжал братьям Мамытовым. У тебя есть 3 дня, чтобы собрать $1500, иначе последствия будут фатальными.";
 
-    [Header("End Screen")]
-    public GameOverScreen gameOverScreen;
-
-    [Header("UI Theme")]
+    [Header("Backstory Text")]
     public TMP_FontAsset globalFont;
 
     [Header("Events")]
@@ -61,17 +58,6 @@ public class StoryManager : MonoBehaviour
 
     void Start()
     {
-        // Поиск или создание экрана конца игры
-        if (gameOverScreen == null)
-            gameOverScreen = Object.FindFirstObjectByType<GameOverScreen>();
-
-        if (gameOverScreen == null)
-        {
-            GameObject go = new GameObject("GameOverScreen");
-            go.transform.SetParent(transform, false);
-            gameOverScreen = go.AddComponent<GameOverScreen>();
-        }
-
         // Подписка на фазы GameManager
         if (GameManager.Instance != null)
         {
@@ -206,13 +192,12 @@ public class StoryManager : MonoBehaviour
         if (_debtRemaining <= 0)
         {
             onGameWin?.Invoke();
-            if (gameOverScreen != null) gameOverScreen.ShowVictory();
+            EndingScreen.Instance?.ShowVictory();
         }
         else
         {
             onGameOver?.Invoke();
-            if (gameOverScreen != null) 
-                gameOverScreen.ShowGameOver($"Ты не успел собрать всю сумму.\nОстаток долга: ${_debtRemaining}");
+            EndingScreen.Instance?.ShowDefeat($"Ты не успел собрать всю сумму.\nОстаток долга: ${_debtRemaining}");
         }
     }
 

@@ -7140,7 +7140,6 @@ MonoBehaviour:
     unwanted 'protection' from the mafia. Now you owe them 1000$ if you don't want
     to kick the bucket, you should give them this money in 3 days. Well... time to
     go dumpster diving, you budgeting genius."
-  gameOverScreen: {fileID: 882663149}
   globalFont: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
   onStoryFinished:
     m_PersistentCalls:
@@ -13245,6 +13244,63 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1907542457
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1907542459}
+  - component: {fileID: 1907542458}
+  m_Layer: 0
+  m_Name: ENDING
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1907542458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1907542457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50e5669787913c34bb97698b6306beb6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndingScreen
+  victoryTitle: JUST IN TIME
+  victoryMessage: You and your bums will be in safe
+  defeatTitle: FRESH MEAT
+  defeatMessage: You wiil be with bums
+  titleFontSize: 72
+  messageFontSize: 28
+  victoryColor: {r: 1, g: 0.85, b: 0.25, a: 1}
+  defeatColor: {r: 0.9, g: 0.25, b: 0.2, a: 1}
+  customFont: {fileID: 0}
+  restartSceneName: Morning
+  mainMenuSceneName: MainMenu
+  fadeInDelay: 0.5
+  fadeInDuration: 1.2
+--- !u!4 &1907542459
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1907542457}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2281.9368, y: -0.00002, z: -4274.1807}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1914091538
 GameObject:
   m_ObjectHideFlags: 0
@@ -15759,3 +15815,4 @@ SceneRoots:
   - {fileID: 1985099373}
   - {fileID: 1879043477}
   - {fileID: 142169001}
+  - {fileID: 1907542459}
