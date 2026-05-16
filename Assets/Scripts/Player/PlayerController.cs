@@ -19,7 +19,8 @@ public class PlayerController : MonoBehaviour
     private bool      _isSprinting;
     private bool      _isSneaking;
     private bool      _isHiding;
-    private bool      _isLocked; // Блокировка движения (для анимаций)
+    private bool      _isLocked;
+    private bool      _isInDialogue;
     private Collider[] _interactHits = new Collider[10];
     private WaitForSeconds _freezeWait;
 
@@ -62,6 +63,13 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (_isInDialogue)
+        {
+            _moveInput = Vector3.zero;
+            if (_animator != null) _animator.SetFloat("Speed", 0f);
+            return;
+        }
+
         Vector2 raw = Vector2.zero;
         
         // Чтение ввода: приоритет у Input System, запасной - WASD на клавиатуре
@@ -91,7 +99,7 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (_isHiding || _isLocked)
+        if (_isHiding || _isLocked || _isInDialogue)
         {
             _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, 0f);
             return;
@@ -109,6 +117,25 @@ public class PlayerController : MonoBehaviour
         {
             Quaternion targetRot = Quaternion.LookRotation(_moveInput.normalized, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 10f * Time.fixedDeltaTime);
+        }
+    }
+
+    void OnDisable()
+    {
+        _moveInput = Vector3.zero;
+        if (_rb != null) _rb.linearVelocity = Vector3.zero;
+        if (_animator != null) _animator.SetFloat("Speed", 0f);
+    }
+
+    public void SetDialogueLock(bool locked)
+    {
+        _isInDialogue = locked;
+        if (locked)
+        {
+            _moveInput = Vector3.zero;
+            _isSprinting = false;
+            if (_rb != null) _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, 0f);
+            if (_animator != null) _animator.SetFloat("Speed", 0f);
         }
     }
 

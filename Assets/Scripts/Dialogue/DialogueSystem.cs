@@ -39,7 +39,7 @@ public class DialogueSystem : MonoBehaviour
         _currentLineIndex = 0;
         _currentNode      = node;
 
-        if (_currentPlayer != null) _currentPlayer.enabled = false;
+        if (_currentPlayer != null) _currentPlayer.SetDialogueLock(true);
 
         PlayNode(node);
     }
@@ -107,7 +107,7 @@ public class DialogueSystem : MonoBehaviour
     void EndDialogue()
     {
         _isActive = false;
-        if (_currentPlayer != null) _currentPlayer.enabled = true;
+        if (_currentPlayer != null) _currentPlayer.SetDialogueLock(false);
         _currentNPC  = null;
         _currentNode = null;
         onDialogueEnd?.Invoke();

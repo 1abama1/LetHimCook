@@ -58,7 +58,6 @@ public class GameHUD : MonoBehaviour
     {
         _murderSystem = FindFirstObjectByType<MurderSystem>();
 
-        // Фонарик
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null)
         {
@@ -94,7 +93,6 @@ public class GameHUD : MonoBehaviour
             DialogueSystem.Instance.onDialogueEnd.AddListener(HideDialogue);
         }
 
-        // Подписываемся на смену фаз — батарейка видна только ночью
         if (GameManager.Instance != null)
         {
             GameManager.Instance.onNightBegin.AddListener(() => 
@@ -115,7 +113,6 @@ public class GameHUD : MonoBehaviour
         UpdateBattery(1f);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
 
-        // Применяем кастомный шрифт ко всем элементам HUD
         ApplyGlobalFonts();
 
         bool isNight = GameManager.Instance?.currentPhase == GamePhase.Night;
@@ -151,11 +148,10 @@ public class GameHUD : MonoBehaviour
             if (stealthKillFill != null) stealthKillFill.fillAmount = prog;
         }
 
-        // Advance dialogue on left click or Space (only when no choices are shown)
         if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsActive)
         {
-            bool clicked = Mouse.current?.leftButton.wasPressedThisFrame    ?? false;
-            bool spaced  = Keyboard.current?.spaceKey.wasPressedThisFrame   ?? false;
+            bool clicked = Mouse.current?.leftButton.wasPressedThisFrame ?? false;
+            bool spaced  = Keyboard.current?.spaceKey.wasPressedThisFrame ?? false;
             if (_choiceButtons.Count == 0 && (clicked || spaced))
             {
                 DialogueSystem.Instance.AdvanceLine();
@@ -263,15 +259,19 @@ public class GameHUD : MonoBehaviour
         ClearChoiceButtons();
         if (choiceButtonPrefab == null || choiceButtonContainer == null) return;
 
-        // Если у диалога НЕТ выборов (просто монолог), создаем кнопку "Продолжить/Закончить"
         if (choices == null || choices.Count == 0)
         {
             Button btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
             btn.gameObject.SetActive(true);
             TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.text = "Далее...";
+            if (label != null) 
+            {
+                StoryManager.ApplyFont(label);
+                label.text = "Далее...";
+                label.color = Color.white;
+            }
             
-            btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(0)); // Это автоматически закроет диалог
+            btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(0));
             _choiceButtons.Add(btn);
             return;
         }
@@ -292,9 +292,11 @@ public class GameHUD : MonoBehaviour
             TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null)
             {
-                label.text         = choices[i].buttonLabel;
+                StoryManager.ApplyFont(label);
+                label.text = choices[i].buttonLabel;
                 label.textWrappingMode = TextWrappingModes.NoWrap;
                 label.overflowMode = TextOverflowModes.Ellipsis;
+                label.color = Color.white;
             }
 
             btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(idx));

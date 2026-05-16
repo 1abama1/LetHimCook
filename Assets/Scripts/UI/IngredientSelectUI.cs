@@ -2,12 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.InputSystem;
-
-/// <summary>
-/// Всплывающее меню выбора ингредиента из инвентаря.
-/// Открывается через IngredientCabinet.Interact().
-/// Создаётся программно — никаких префабов не нужно.
-/// </summary>
 public class IngredientSelectUI : MonoBehaviour
 {
     public static IngredientSelectUI Instance { get; private set; }
@@ -17,7 +11,6 @@ public class IngredientSelectUI : MonoBehaviour
     private Transform     _grid;
     private PlayerController _pendingPlayer;
 
-    // ── Lifecycle ──────────────────────────────────────────────────
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -33,12 +26,10 @@ public class IngredientSelectUI : MonoBehaviour
             Close();
     }
 
-    // ── Public API ─────────────────────────────────────────────────
     public void Open(PlayerController player)
     {
         if (player.HeldIngredient != null || player.HeldPlate != null)
         {
-            Debug.Log("[IngredientSelect] Руки заняты!");
             return;
         }
         _pendingPlayer = player;
@@ -60,7 +51,6 @@ public class IngredientSelectUI : MonoBehaviour
         else        Open(player);
     }
 
-    // ── Grid ───────────────────────────────────────────────────────
     private void RefreshGrid()
     {
         foreach (Transform child in _grid)
@@ -91,7 +81,6 @@ public class IngredientSelectUI : MonoBehaviour
 
     private void CreateButton(IngredientData ingredient, int count)
     {
-        // ── Карточка ──────────────────────────────────────────────
         var card    = new GameObject("Card_" + ingredient.ingredientName, typeof(RectTransform));
         card.transform.SetParent(_grid, false);
 
@@ -112,7 +101,6 @@ public class IngredientSelectUI : MonoBehaviour
         var captured = ingredient;
         btn.onClick.AddListener(() => OnSelect(captured));
 
-        // ── Иконка ────────────────────────────────────────────────
         var iconGo  = new GameObject("Icon", typeof(RectTransform));
         iconGo.transform.SetParent(card.transform, false);
         var iconImg  = iconGo.AddComponent<Image>();
@@ -125,7 +113,6 @@ public class IngredientSelectUI : MonoBehaviour
         iconRect.anchorMax = new Vector2(0.9f, 0.93f);
         iconRect.offsetMin = iconRect.offsetMax = Vector2.zero;
 
-        // ── Название ──────────────────────────────────────────────
         var nameGo  = new GameObject("Name", typeof(RectTransform));
         nameGo.transform.SetParent(card.transform, false);
         var nameTmp = nameGo.AddComponent<TextMeshProUGUI>();
@@ -142,7 +129,6 @@ public class IngredientSelectUI : MonoBehaviour
         nameRect.offsetMin = new Vector2(4, 2);
         nameRect.offsetMax = new Vector2(-4, -2);
 
-        // ── Бейдж кол-ва ──────────────────────────────────────────
         var badgeGo  = new GameObject("Badge", typeof(RectTransform));
         badgeGo.transform.SetParent(card.transform, false);
         var badgeImg = badgeGo.AddComponent<Image>();
@@ -176,7 +162,6 @@ public class IngredientSelectUI : MonoBehaviour
         var economy = PlayerEconomy.Instance;
         if (economy == null || economy.GetIngredientCount(ingredient) <= 0)
         {
-            Debug.Log("[IngredientSelect] Уже нет в наличии!");
             RefreshGrid();
             return;
         }
@@ -185,15 +170,12 @@ public class IngredientSelectUI : MonoBehaviour
         var copy = Instantiate(ingredient);
         _pendingPlayer.GiveIngredient(copy);
 
-        Debug.Log($"[IngredientSelect] Взят: {ingredient.ingredientName}");
         AudioManager.Instance?.PlayAt("cabinet_open", _pendingPlayer.transform.position);
         Close();
     }
 
-    // ── Построение UI ─────────────────────────────────────────────
     private void BuildUI()
     {
-        // Canvas
         var cvGo = new GameObject("IngSelectCanvas", typeof(RectTransform));
         cvGo.transform.SetParent(transform);
         var cv = cvGo.AddComponent<Canvas>();
@@ -205,7 +187,6 @@ public class IngredientSelectUI : MonoBehaviour
         cvs.matchWidthOrHeight     = 0.5f;
         cvGo.AddComponent<GraphicRaycaster>();
 
-        // Тёмный фон
         var overlayGo  = new GameObject("Overlay", typeof(RectTransform));
         overlayGo.transform.SetParent(cvGo.transform, false);
         var overlayImg = overlayGo.AddComponent<Image>();
@@ -215,7 +196,6 @@ public class IngredientSelectUI : MonoBehaviour
         overlayBtn.transition = Selectable.Transition.None;
         overlayBtn.onClick.AddListener(Close);
 
-        // Панель
         _panel = new GameObject("Panel", typeof(RectTransform));
         _panel.transform.SetParent(cvGo.transform, false);
         var panelImg  = _panel.AddComponent<Image>();
@@ -225,7 +205,6 @@ public class IngredientSelectUI : MonoBehaviour
         panelRect.anchorMax = new Vector2(0.8f, 0.88f);
         panelRect.offsetMin = panelRect.offsetMax = Vector2.zero;
 
-        // Заголовок
         var titleGo  = new GameObject("Title", typeof(RectTransform));
         titleGo.transform.SetParent(_panel.transform, false);
         var titleTmp = titleGo.AddComponent<TextMeshProUGUI>();
@@ -240,7 +219,6 @@ public class IngredientSelectUI : MonoBehaviour
         titleRect.anchorMax = new Vector2(1f, 1f);
         titleRect.offsetMin = titleRect.offsetMax = Vector2.zero;
 
-        // Подсказка
         var hintGo  = new GameObject("Hint", typeof(RectTransform));
         hintGo.transform.SetParent(_panel.transform, false);
         var hintTmp = hintGo.AddComponent<TextMeshProUGUI>();
@@ -254,7 +232,6 @@ public class IngredientSelectUI : MonoBehaviour
         hintRect.anchorMax = new Vector2(1f, 0.09f);
         hintRect.offsetMin = hintRect.offsetMax = Vector2.zero;
 
-        // ScrollView
         var scrollGo   = new GameObject("Scroll", typeof(RectTransform));
         scrollGo.transform.SetParent(_panel.transform, false);
         var scrollRect = scrollGo.AddComponent<ScrollRect>();
@@ -265,10 +242,9 @@ public class IngredientSelectUI : MonoBehaviour
         var scrollBg = scrollGo.AddComponent<Image>();
         scrollBg.color = new Color(0.06f, 0.06f, 0.09f, 0.4f);
 
-        // Контент (grid)
         var contentGo   = new GameObject("Content", typeof(RectTransform));
         contentGo.transform.SetParent(scrollGo.transform, false);
-        var contentRect = contentGo.AddComponent<RectTransform>();
+        var contentRect = contentGo.GetComponent<RectTransform>();
         contentRect.anchorMin = new Vector2(0f, 1f);
         contentRect.anchorMax = new Vector2(1f, 1f);
         contentRect.pivot     = new Vector2(0.5f, 1f);
