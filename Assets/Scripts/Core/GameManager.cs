@@ -71,6 +71,20 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         if (!_phaseActive || _transitioning) return;
+        
+        // 1. Не тикаем, если игра закончена
+        if (StoryManager.Instance != null && StoryManager.Instance.IsGameEnded)
+        {
+            _phaseActive = false;
+            return;
+        }
+
+        // 2. Не тикаем, если StoryManager сейчас показывает итоги дня (пауза)
+        if (StoryManager.Instance != null && StoryManager.Instance.IsShowingSummary)
+        {
+            return; 
+        }
+
         phaseTimer -= Time.deltaTime;
         if (phaseTimer <= 0f) TransitionPhase();
     }
@@ -103,6 +117,23 @@ public class GameManager : MonoBehaviour
     void TransitionPhase()
     {
         if (_transitioning) return;
+
+        // Если игра закончилась, больше не переключаем фазы
+        if (StoryManager.Instance != null && StoryManager.Instance.IsGameEnded)
+            return;
+
+        // Если это был День 3 (последний), то мы НЕ переходим к следующему дню автоматически.
+        // Мы ждем, пока StoryManager вызовет концовку.
+        if (currentPhase == GamePhase.Day && StoryManager.Instance != null)
+        {
+            if (StoryManager.Instance.CurrentDay >= StoryManager.Instance.totalDays)
+            {
+                // Финальный день закончен. Переходим в Ночь (формально), 
+                // но StoryManager в onNightBegin поймает это и завершит игру.
+                // Просто убедимся, что мы не уходим в бесконечный цикл.
+            }
+        }
+
         GamePhase next = (currentPhase == GamePhase.Night) ? GamePhase.Day : GamePhase.Night;
         StartCoroutine(FadeTransition(next));
     }

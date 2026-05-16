@@ -4,16 +4,15 @@ using System.Collections;
 
 /// <summary>
 /// Экран перехода между фазами (Ночь ↔ День).
-/// Прикрепите к Canvas-объекту поверх всего.
-/// Автоматически подписывается на GameManager.onNightBegin / onDayBegin.
+/// Все переходы используют SmoothStep для ease-in/out.
 /// </summary>
 public class PhaseTransitionScreen : MonoBehaviour
 {
     [Header("UI References")]
-    public CanvasGroup       canvasGroup;
-    public UnityEngine.UI.Image backgroundImage;
-    public TMPro.TextMeshProUGUI phaseLabel;
-    public TMPro.TextMeshProUGUI subtitleLabel;
+    public CanvasGroup                   canvasGroup;
+    public UnityEngine.UI.Image          backgroundImage;
+    public TMPro.TextMeshProUGUI         phaseLabel;
+    public TMPro.TextMeshProUGUI         subtitleLabel;
 
     [Header("Fade Settings")]
     public float fadeInDuration  = 0.5f;
@@ -32,6 +31,8 @@ public class PhaseTransitionScreen : MonoBehaviour
 
     public UnityEvent onTransitionComplete;
 
+    private Coroutine _currentTransition;
+
     void Start()
     {
         if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
@@ -46,10 +47,17 @@ public class PhaseTransitionScreen : MonoBehaviour
     }
 
     public void ShowNightTransition() =>
-        StartCoroutine(TransitionRoutine(nightTitle, nightSubtitle, nightColor));
+        PlayTransition(nightTitle, nightSubtitle, nightColor);
 
     public void ShowDayTransition() =>
-        StartCoroutine(TransitionRoutine(dayTitle, daySubtitle, dayColor));
+        PlayTransition(dayTitle, daySubtitle, dayColor);
+
+    private void PlayTransition(string title, string subtitle, Color bgColor)
+    {
+        if (_currentTransition != null)
+            StopCoroutine(_currentTransition);
+        _currentTransition = StartCoroutine(TransitionRoutine(title, subtitle, bgColor));
+    }
 
     IEnumerator TransitionRoutine(string title, string subtitle, Color bgColor)
     {
@@ -59,28 +67,39 @@ public class PhaseTransitionScreen : MonoBehaviour
 
         canvasGroup.blocksRaycasts = true;
 
-        // Fade In
-        yield return StartCoroutine(Fade(0f, 1f, fadeInDuration));
+        // Fade In (ease-in/out)
+        yield return StartCoroutine(FadeSmooth(0f, 1f, fadeInDuration));
 
         // Hold
         yield return new WaitForSeconds(holdDuration);
 
-        // Fade Out
-        yield return StartCoroutine(Fade(1f, 0f, fadeOutDuration));
+        // Fade Out (ease-in/out)
+        yield return StartCoroutine(FadeSmooth(1f, 0f, fadeOutDuration));
 
         canvasGroup.blocksRaycasts = false;
+        _currentTransition = null;
         onTransitionComplete?.Invoke();
     }
 
-    IEnumerator Fade(float from, float to, float duration)
+    /// <summary>Fade с SmoothStep (ease-in/out), работает при любом timeScale.</summary>
+    IEnumerator FadeSmooth(float from, float to, float duration)
     {
-        float t = 0f;
-        while (t < duration)
+        if (duration <= 0f)
         {
-            t += Time.unscaledDeltaTime;
-            canvasGroup.alpha = Mathf.Lerp(from, to, t / duration);
+            canvasGroup.alpha = to;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t      = Mathf.Clamp01(elapsed / duration);
+            float smooth = t * t * (3f - 2f * t);
+            canvasGroup.alpha = Mathf.Lerp(from, to, smooth);
             yield return null;
         }
+
         canvasGroup.alpha = to;
     }
 }

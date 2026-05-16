@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
@@ -7,497 +6,313 @@ using TMPro;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// StoryManager — управляет всем нарративным потоком игры:
-///   1. Показывает предысторию (белый текст на чёрном) перед стартом.
-///   2. Запускает геймплей ночью (первая фаза = Night).
-///   3. Следит за 3 игровыми днями и долгом в $2400.
-///   4. Вызывает Game Over или Victory по итогу.
+/// StoryManager — полностью автоматизированный менеджер сюжета и UI.
+/// Программно создает все необходимые панели: предысторию, итоги дня и связывается с финальным экраном.
 /// </summary>
 public class StoryManager : MonoBehaviour
 {
     public static StoryManager Instance { get; private set; }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Настройки долга
-    // ─────────────────────────────────────────────────────────────────────────
     [Header("Debt Settings")]
-    [Tooltip("Общая сумма долга, которую надо выплатить за 3 дня")]
-    public int totalDebt = 1500;
+    public int totalDebt      = 1500;
+    public int totalDays      = 3;
 
-    [Tooltip("Сколько дней даётся на погашение долга")]
-    public int totalDays = 3;
-
-    [Tooltip("Минимальная сумма, которую нужно заработать ЗА ДЕНЬ (или иметь к концу дня), чтобы не проиграть")]
-    public int dailyMoneyGoal = 200;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Backstory
-    // ─────────────────────────────────────────────────────────────────────────
     [Header("Backstory Text")]
     [TextArea(4, 12)]
-    public string backstoryText = "";
+    public string backstoryText = "Ты задолжал братьям Мамытовым. У тебя есть 3 дня, чтобы собрать $1500, иначе последствия будут фатальными.";
 
-
-    [Header("Backstory Timing")]
-    [Tooltip("Задержка перед появлением текста (сек)")]
-    public float textFadeInDelay  = 0.5f;
-    [Tooltip("Время появления текста")]
-    public float textFadeInTime   = 1.5f;
-    [Tooltip("Как долго текст стоит на экране")]
-    public float textDisplayTime  = 6f;
-    [Tooltip("Время исчезновения текста")]
-    public float textFadeOutTime  = 1.2f;
-    [Tooltip("Задержка после текста перед стартом игры")]
-    public float postStoryDelay   = 0.8f;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  UI References (создаются программно, или назначьте вручную)
-    // ─────────────────────────────────────────────────────────────────────────
-    [Header("UI References (auto-built if null)")]
-    public Canvas storyCanvas;
-    public Image  blackBackground;
-    public TMP_Text storyLabel;
-
-    // HUD-подсказка долга (опционально)
-    public TMP_Text debtHudLabel;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Day-End Summary Panel
-    // ─────────────────────────────────────────────────────────────────────────
-    [Header("Day Summary Panel")]
-    public GameObject daySummaryPanel;
-    public TMP_Text   daySummaryText;
-    public Button     daySummaryContinueButton;
-    [Tooltip("Сколько секунд ждать до автоматического продолжения")]
-    public float daySummaryAutoAdvance = 5f;
-
-    [Header("End Screen Reference")]
+    [Header("End Screen")]
     public GameOverScreen gameOverScreen;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Events
-    // ─────────────────────────────────────────────────────────────────────────
     [Header("Events")]
     public UnityEvent onStoryFinished;
     public UnityEvent onGameWin;
     public UnityEvent onGameOver;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  State
-    // ─────────────────────────────────────────────────────────────────────────
-    private int _currentDay   = 0;   // 0 = backstory, 1-3 = игровые дни
-    private int _debtPaid     = 0;
-    private int _debtRemaining => totalDebt - _debtPaid;
+    // Ссылки на авто-созданные элементы
+    private Canvas   _uiCanvas;
+    private TMP_Text _storyLabel;
+    private GameObject _summaryPanel;
+    private TMP_Text   _summaryText;
+    private TMP_Text   _debtHudLabel;
+
+    private int  _currentDay  = 0;
+    private int  _debtPaid    = 0;
+    private int  _debtRemaining => totalDebt - _debtPaid;
     private bool _gameEnded   = false;
-    private bool _waitingForSummaryConfirm = false;
+    private bool _waitingForSummaryConfirm  = false;
     private bool _isHandlingPhaseTransition = false;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Unity lifecycle
-    // ─────────────────────────────────────────────────────────────────────────
+    public bool IsShowingSummary => _waitingForSummaryConfirm;
+    public bool IsGameEnded      => _gameEnded;
+    public int  CurrentDay       => _currentDay;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        
+        BuildProgrammaticUI();
     }
 
     void Start()
     {
-        BuildUIIfNeeded();
-        
+        // Поиск или создание экрана конца игры
         if (gameOverScreen == null)
             gameOverScreen = Object.FindFirstObjectByType<GameOverScreen>();
 
-        HideAllPanels();
+        if (gameOverScreen == null)
+        {
+            GameObject go = new GameObject("GameOverScreen");
+            go.transform.SetParent(transform, false);
+            gameOverScreen = go.AddComponent<GameOverScreen>();
+        }
 
-        // Подписываемся на переходы фаз
+        // Подписка на фазы GameManager
         if (GameManager.Instance != null)
         {
-            // Начало дня: увеличиваем счетчик дней
-            GameManager.Instance.onDayBegin.AddListener(() => {
+            GameManager.Instance.onDayBegin.AddListener(() =>
+            {
                 if (!_gameEnded) _currentDay++;
-                Debug.Log($"[StoryManager] Начался День {_currentDay}");
             });
-
-            // Начало ночи: день закончился -> проверяем цель и показываем суммари
             GameManager.Instance.onNightBegin.AddListener(OnDayEnded);
         }
 
-        // Стартуем с предыстории
         StartCoroutine(RunBackstory());
     }
 
     void Update()
     {
-        // Обновляем HUD долга каждый кадр
-        UpdateDebtHud();
+        if (_debtHudLabel != null && _currentDay > 0)
+        {
+            _debtHudLabel.text = $"ДЕНЬ {_currentDay}/{totalDays} | ДОЛГ: ${_debtRemaining}";
+        }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Backstory sequence
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Поток предыстории ─────────────────────────────────────────────────────
     IEnumerator RunBackstory()
     {
-        // Замораживаем игру пока идёт предыстория
         Time.timeScale = 0f;
+        _uiCanvas.gameObject.SetActive(true);
+        _summaryPanel.SetActive(false);
+        _storyLabel.gameObject.SetActive(true);
+        _storyLabel.text = backstoryText;
+        _storyLabel.alpha = 0f;
 
-        // Показываем чёрный фон + текст
-        storyCanvas.gameObject.SetActive(true);
-        blackBackground.color = Color.black;
+        yield return new WaitForSecondsRealtime(0.5f);
+        yield return FadeAlpha(_storyLabel, 0f, 1f, 1.5f);
 
-        storyLabel.text  = backstoryText;
-        storyLabel.alpha = 0f;
-        storyLabel.gameObject.SetActive(true);
-
-        // Пауза перед появлением
-        yield return new WaitForSecondsRealtime(textFadeInDelay);
-
-        // Fade in
-        yield return FadeTextRealtime(storyLabel, 0f, 1f, textFadeInTime);
-
-        // Ждём пока текст читают; нажатие любой клавиши/касание ускоряет
-        float elapsed = 0f;
-        while (elapsed < textDisplayTime)
+        // Ожидание клика или клавиши
+        while (true)
         {
-            elapsed += Time.unscaledDeltaTime;
-            bool anyKey = (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
-                       || (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame);
-            if (anyKey) break;
+            bool skip = (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
+                     || (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame);
+            if (skip) break;
             yield return null;
         }
 
-        // Fade out
-        yield return FadeTextRealtime(storyLabel, 1f, 0f, textFadeOutTime);
-        yield return FadeImageRealtime(blackBackground, 1f, 0f, textFadeOutTime);
-
-        // Скрываем overlay
-        storyCanvas.gameObject.SetActive(false);
-
-        yield return new WaitForSecondsRealtime(postStoryDelay);
-
-        // Запускаем игру с первой ночи
+        yield return FadeAlpha(_storyLabel, 1f, 0f, 1f);
+        _storyLabel.gameObject.SetActive(false);
+        _uiCanvas.gameObject.SetActive(false);
+        
         Time.timeScale = 1f;
-        _currentDay = 0; // Начнем с 0, инкремент будет при первом onDayBegin
-        Debug.Log("[StoryManager] Предыстория завершена. Начинается первая ночь.");
-
-        // Сообщаем подписчикам
         onStoryFinished?.Invoke();
 
-        // Убеждаемся, что GameManager стартует с Night
         if (GameManager.Instance != null)
-        {
-            yield return null; // Ждём кадр для финализации всех систем
             GameManager.Instance.BeginPhase(GamePhase.Night);
-        }
 
-        UpdateDebtHud();
+        if (ScreenFader.Instance != null)
+            yield return ScreenFader.Instance.FadeFromBlack(1.2f);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Called when a day ends (GameManager.onNightBegin fires)
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Конец дня ─────────────────────────────────────────────────────────────
     void OnDayEnded()
     {
         if (_gameEnded || _currentDay == 0 || _isHandlingPhaseTransition) return;
-
         StartCoroutine(DayEndSequence());
     }
 
-    private IEnumerator DayEndSequence()
+    IEnumerator DayEndSequence()
     {
         _isHandlingPhaseTransition = true;
 
-        // Затемняем экран
         if (ScreenFader.Instance != null)
             yield return ScreenFader.Instance.FadeToBlack(1f);
 
-        // Проверяем цель на сегодня
-        int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
-        
-        if (currentMoney < dailyMoneyGoal)
+        if (_currentDay >= totalDays)
         {
-            // Не набрали нужную сумму за день -> Геймовер
-            TriggerGameOver($"Ты не смог заработать даже ${dailyMoneyGoal} за день.\nБратья Мамытовы не любят ждать.");
             _isHandlingPhaseTransition = false;
+            CheckEndCondition();
             yield break;
         }
 
-        ShowDaySummary();
+        ShowSummary();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Day Summary
-    // ─────────────────────────────────────────────────────────────────────────
-    void ShowDaySummary()
+    void ShowSummary()
     {
-        if (daySummaryPanel == null) return;
-
         Time.timeScale = 0f;
-        daySummaryPanel.SetActive(true);
-
-        int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
-
-        string summary =
-            $"═══ КОНЕЦ ДНЯ {_currentDay} ═══\n\n" +
-            $"Баланс:         ${currentMoney}\n" +
-            $"Долг погашен:   ${_debtPaid}\n" +
-            $"Остаток долга:  ${_debtRemaining}\n\n";
-
-        if (_currentDay >= totalDays)
-        {
-            summary += _debtRemaining <= 0
-                ? "✅ Долг выплачен! Братья Мамытовы довольны."
-                : $"❌ Время вышло. Остаток: ${_debtRemaining}";
-        }
-        else
-        {
-            summary += $"Осталось дней: {totalDays - _currentDay}";
-        }
-
-        if (daySummaryText != null)
-            daySummaryText.text = summary;
-
-        StartCoroutine(DaySummaryRoutine());
-    }
-
-    IEnumerator DaySummaryRoutine()
-    {
+        _uiCanvas.gameObject.SetActive(true);
+        _summaryPanel.SetActive(true);
         _waitingForSummaryConfirm = true;
-        float elapsed = 0f;
 
-        while (_waitingForSummaryConfirm && elapsed < daySummaryAutoAdvance)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            yield return null;
-        }
-
-        AdvanceFromSummary();
+        int money = PlayerEconomy.Instance?.Money ?? 0;
+        _summaryText.text = 
+            $"<size=32><color=#FFD700>КОНЕЦ ДНЯ {_currentDay}</color></size>\n\n" +
+            $"На руках: <color=white>${money}</color>\n" +
+            $"Выплачено: <color=green>${_debtPaid}</color>\n" +
+            $"Остаток долга: <color=red>${_debtRemaining}</color>\n\n" +
+            $"Дней до финала: {totalDays - _currentDay}";
     }
 
-    /// <summary>Вызывается кнопкой "Продолжить" на панели суммари.</summary>
     public void OnSummaryContinuePressed()
     {
         _waitingForSummaryConfirm = false;
-    }
-
-    void AdvanceFromSummary()
-    {
-        if (daySummaryPanel != null)
-            daySummaryPanel.SetActive(false);
-
+        _summaryPanel.SetActive(false);
+        _uiCanvas.gameObject.SetActive(false);
         Time.timeScale = 1f;
 
-        // Если не финал, возвращаем свет
-        if (_currentDay < totalDays && !_gameEnded)
+        if (!_gameEnded)
         {
             if (ScreenFader.Instance != null)
                 StartCoroutine(ScreenFader.Instance.FadeFromBlack(1f));
-        }
-
-        if (_currentDay >= totalDays)
-        {
-            // Финал
-            CheckEndCondition();
-        }
-        else
-        {
-            // Просто продолжаем к ночи (GameManager сам переключит фазу или мы форсируем)
-            // Но в нашей схеме GameManager переключает фазы сам, а мы просто ставим Time.timeScale = 1
+            
             if (GameManager.Instance != null && GameManager.Instance.currentPhase != GamePhase.Night)
                 GameManager.Instance.BeginPhase(GamePhase.Night);
         }
-
         _isHandlingPhaseTransition = false;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Debt payments (вызывайте извне, например из DeliveryCounter)
-    // ─────────────────────────────────────────────────────────────────────────
-    /// <summary>
-    /// Вызовите этот метод когда игрок хочет погасить часть долга деньгами.
-    /// amount = сколько платит; возвращает true если платёж прошёл.
-    /// </summary>
-    public bool PayDebt(int amount)
-    {
-        if (amount <= 0 || _gameEnded) return false;
-
-        PlayerEconomy economy = PlayerEconomy.Instance;
-        if (economy == null) return false;
-
-        int toPay = Mathf.Min(amount, _debtRemaining); // не переплачиваем
-        if (!economy.SpendMoney(toPay)) return false;
-
-        _debtPaid += toPay;
-        Debug.Log($"[StoryManager] Долг оплачен: ${toPay}. Итого оплачено: ${_debtPaid} / ${totalDebt}");
-        UpdateDebtHud();
-
-        if (_debtRemaining <= 0)
-        {
-            Debug.Log("[StoryManager] Долг полностью погашен!");
-            // Победа наступит в конце текущей ночи (через OnNightEnded → CheckEndCondition)
-        }
-
-        return true;
-    }
-
-    /// <summary>Автоматически засчитывает весь текущий баланс как погашение долга.</summary>
-    public void AutoPayDebtFromBalance()
-    {
-        int money = PlayerEconomy.Instance?.Money ?? 0;
-        if (money > 0) PayDebt(money);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  End condition
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Финальная проверка ────────────────────────────────────────────────────
     void CheckEndCondition()
     {
         if (_gameEnded) return;
+        
+        // Автоматическая выплата долга из остатка на руках
+        int money = PlayerEconomy.Instance?.Money ?? 0;
+        if (money > 0)
+        {
+            int toPay = Mathf.Min(money, _debtRemaining);
+            PlayerEconomy.Instance.SpendMoney(toPay);
+            _debtPaid += toPay;
+        }
+
         _gameEnded = true;
 
         if (_debtRemaining <= 0)
-            TriggerVictory();
+        {
+            onGameWin?.Invoke();
+            if (gameOverScreen != null) gameOverScreen.ShowVictory();
+        }
         else
-            TriggerGameOver();
+        {
+            onGameOver?.Invoke();
+            if (gameOverScreen != null) 
+                gameOverScreen.ShowGameOver($"Ты не успел собрать всю сумму.\nОстаток долга: ${_debtRemaining}");
+        }
     }
 
-    void TriggerVictory()
+    // ── Постройка интерфейса ──────────────────────────────────────────────────
+    void BuildProgrammaticUI()
     {
-        Debug.Log("[StoryManager] 🏆 Победа! Долг погашен.");
+        // 1. Canvas
+        GameObject canvasGO = new GameObject("[StoryUI]");
+        canvasGO.transform.SetParent(transform, false);
+        _uiCanvas = canvasGO.AddComponent<Canvas>();
+        _uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        _uiCanvas.sortingOrder = 998;
         
-        if (gameOverScreen != null)
-        {
-            gameOverScreen.ShowVictory();
-        }
-        else
-        {
-            Time.timeScale = 0f;
-            Debug.LogWarning("[StoryManager] GameOverScreen не назначен!");
-        }
-
-        onGameWin?.Invoke();
-    }
-
-    void TriggerGameOver(string reason = "")
-    {
-        Debug.Log($"[StoryManager] 💀 Game Over. {reason}");
-
-        if (gameOverScreen != null)
-        {
-            string finalReason = string.IsNullOrEmpty(reason) 
-                ? $"Ты не смог собрать ${totalDebt} вовремя." 
-                : reason;
-            
-            gameOverScreen.ShowGameOver(finalReason);
-        }
-        else
-        {
-            Time.timeScale = 0f;
-            Debug.LogWarning("[StoryManager] GameOverScreen не назначен!");
-        }
-
-        onGameOver?.Invoke();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  HUD helper
-    // ─────────────────────────────────────────────────────────────────────────
-    void UpdateDebtHud()
-    {
-        if (debtHudLabel == null || _currentDay == 0) return;
-        debtHudLabel.text =
-            $"День {_currentDay}/{totalDays}  |  Долг: ${_debtRemaining}";
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Public getters
-    // ─────────────────────────────────────────────────────────────────────────
-    public int  CurrentDay      => _currentDay;
-    public int  DebtRemaining   => _debtRemaining;
-    public int  DebtPaid        => _debtPaid;
-    public bool IsGameEnded     => _gameEnded;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  UI builder (создаёт canvas программно если не назначен в инспекторе)
-    // ─────────────────────────────────────────────────────────────────────────
-    void BuildUIIfNeeded()
-    {
-        if (storyCanvas != null) return;
-
-        // Canvas
-        GameObject canvasGO = new GameObject("StoryCanvas");
-        canvasGO.transform.SetParent(transform);
-        storyCanvas = canvasGO.AddComponent<Canvas>();
-        storyCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        storyCanvas.sortingOrder = 999; // поверх всего
-        canvasGO.AddComponent<CanvasScaler>().uiScaleMode =
-            CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        CanvasScaler sc = canvasGO.AddComponent<CanvasScaler>();
+        sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        sc.referenceResolution = new Vector2(1920, 1080);
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // Чёрный фон
-        GameObject bgGO = new GameObject("BlackBackground");
+        // 2. Black BG
+        GameObject bgGO = new GameObject("BlackBG");
         bgGO.transform.SetParent(canvasGO.transform, false);
-        blackBackground = bgGO.AddComponent<Image>();
-        blackBackground.color = Color.black;
-        RectTransform bgRect = bgGO.GetComponent<RectTransform>();
-        bgRect.anchorMin = Vector2.zero;
-        bgRect.anchorMax = Vector2.one;
-        bgRect.offsetMin = Vector2.zero;
-        bgRect.offsetMax = Vector2.zero;
-        bgRect.localScale = Vector3.one;
+        Image bgImg = bgGO.AddComponent<Image>();
+        bgImg.color = Color.black;
+        Stretch(bgGO.GetComponent<RectTransform>());
 
-        // Текст предыстории
-        GameObject labelGO = new GameObject("StoryLabel");
-        labelGO.transform.SetParent(canvasGO.transform, false);
-        storyLabel = labelGO.AddComponent<TextMeshProUGUI>();
-        storyLabel.text      = backstoryText;
-        storyLabel.color     = Color.white;
-        storyLabel.fontSize  = 22f;
-        storyLabel.alignment = TextAlignmentOptions.Center;
-        storyLabel.alpha     = 0f;
+        // 3. Story Label
+        GameObject storyGO = new GameObject("StoryLabel");
+        storyGO.transform.SetParent(canvasGO.transform, false);
+        _storyLabel = storyGO.AddComponent<TextMeshProUGUI>();
+        _storyLabel.alignment = TextAlignmentOptions.Center;
+        _storyLabel.fontSize = 28f;
+        _storyLabel.enableWordWrapping = true;
+        Stretch(storyGO.GetComponent<RectTransform>(), 100f);
 
-        RectTransform labelRect = labelGO.GetComponent<RectTransform>();
-        labelRect.anchorMin = new Vector2(0.1f, 0.1f);
-        labelRect.anchorMax = new Vector2(0.9f, 0.9f);
-        labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
+        // 4. Summary Panel
+        _summaryPanel = new GameObject("SummaryPanel");
+        _summaryPanel.transform.SetParent(canvasGO.transform, false);
+        Image sBg = _summaryPanel.AddComponent<Image>();
+        sBg.color = new Color(0, 0, 0, 0.85f);
+        Stretch(_summaryPanel.GetComponent<RectTransform>(), 400f, 250f);
 
-        canvasGO.SetActive(false);
+        GameObject sTextGO = new GameObject("SummaryText");
+        sTextGO.transform.SetParent(_summaryPanel.transform, false);
+        _summaryText = sTextGO.AddComponent<TextMeshProUGUI>();
+        _summaryText.alignment = TextAlignmentOptions.Center;
+        _summaryText.fontSize = 24f;
+        Stretch(sTextGO.GetComponent<RectTransform>(), 20f, 80f);
+
+        // Button
+        GameObject btnGO = new GameObject("ContinueBtn");
+        btnGO.transform.SetParent(_summaryPanel.transform, false);
+        Image bImg = btnGO.AddComponent<Image>();
+        bImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+        Button btn = btnGO.AddComponent<Button>();
+        btn.onClick.AddListener(OnSummaryContinuePressed);
+
+        RectTransform bRT = btnGO.GetComponent<RectTransform>();
+        bRT.anchorMin = new Vector2(0.5f, 0);
+        bRT.anchorMax = new Vector2(0.5f, 0);
+        bRT.pivot = new Vector2(0.5f, 0);
+        bRT.sizeDelta = new Vector2(200, 50);
+        bRT.anchoredPosition = new Vector2(0, 30);
+
+        GameObject bTextGO = new GameObject("Text");
+        bTextGO.transform.SetParent(btnGO.transform, false);
+        TMP_Text bt = bTextGO.AddComponent<TextMeshProUGUI>();
+        bt.text = "ПРОДОЛЖИТЬ";
+        bt.alignment = TextAlignmentOptions.Center;
+        bt.fontSize = 18f;
+        Stretch(bTextGO.GetComponent<RectTransform>());
+
+        // 5. HUD Debt
+        GameObject hudGO = new GameObject("DebtHUD");
+        hudGO.transform.SetParent(canvasGO.transform, false);
+        _debtHudLabel = hudGO.AddComponent<TextMeshProUGUI>();
+        _debtHudLabel.fontSize = 20f;
+        _debtHudLabel.alignment = TextAlignmentOptions.TopRight;
+        RectTransform hRT = hudGO.GetComponent<RectTransform>();
+        hRT.anchorMin = hRT.anchorMax = new Vector2(1, 1);
+        hRT.pivot = new Vector2(1, 1);
+        hRT.sizeDelta = new Vector2(400, 50);
+        hRT.anchoredPosition = new Vector2(-20, -20);
+
+        _uiCanvas.gameObject.SetActive(false);
     }
 
-    void HideAllPanels()
+    void Stretch(RectTransform rt, float marginX = 0, float marginY = 0)
     {
-        if (daySummaryPanel != null) daySummaryPanel.SetActive(false);
-        // Панели GameOver/Victory теперь управляются через GameOverScreen
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = new Vector2(marginX, marginY);
+        rt.offsetMax = new Vector2(-marginX, -marginY);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Fade helpers (unscaled — работают при Time.timeScale = 0)
-    // ─────────────────────────────────────────────────────────────────────────
-    IEnumerator FadeTextRealtime(TMP_Text label, float from, float to, float duration)
+    IEnumerator FadeAlpha(TMP_Text txt, float from, float to, float dur)
     {
-        float t = 0f;
-        while (t < duration)
+        float elapsed = 0;
+        while (elapsed < dur)
         {
-            t += Time.unscaledDeltaTime;
-            label.alpha = Mathf.Lerp(from, to, t / duration);
+            elapsed += Time.unscaledDeltaTime;
+            txt.alpha = Mathf.Lerp(from, to, elapsed / dur);
             yield return null;
         }
-        label.alpha = to;
-    }
-
-    IEnumerator FadeImageRealtime(Image img, float from, float to, float duration)
-    {
-        float t = 0f;
-        Color c = img.color;
-        while (t < duration)
-        {
-            t += Time.unscaledDeltaTime;
-            c.a = Mathf.Lerp(from, to, t / duration);
-            img.color = c;
-            yield return null;
-        }
-        c.a = to;
-        img.color = c;
+        txt.alpha = to;
     }
 }
