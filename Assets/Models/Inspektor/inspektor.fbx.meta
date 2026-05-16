@@ -3,7 +3,12 @@ guid: 045308fbf2a943c4bbb4c8320fc5a344
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Inspektor_
+    second: {fileID: 2100000, guid: 16b8a4228ec4e6340b93ab51907f6adb, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -100,7 +105,7 @@ ModelImporter:
   autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 2
   humanoidOversampling: 1
-  avatarSetup: 0
+  avatarSetup: 1
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1
   importBlendShapeDeformPercent: 1
   remapMaterialsIfMaterialImportModeIsNone: 0

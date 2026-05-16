@@ -78,11 +78,12 @@ public class Plate : MonoBehaviour, IInteractable
             return;
         }
 
-        Vector3 offset = Vector3.up * 0.08f * _icons.Count;
-        GameObject go = Instantiate(prefab, root.position + offset, Quaternion.identity);
-        go.transform.SetParent(root, true);
-        go.transform.localPosition += ing.visualOffset;
-        go.transform.localRotation *= Quaternion.Euler(ing.visualRotation);
+        Vector3 stackOffset = Vector3.up * 0.08f * _icons.Count;
+        GameObject go = Instantiate(prefab, root);
+        go.transform.localPosition = stackOffset + ing.plateOffset;
+        go.transform.localRotation = Quaternion.Euler(ing.plateRotation);
+        // Делим на 100 для коррекции масштаба моделей
+        go.transform.localScale    = Vector3.one * (ing.visualScale);
 
         // Спрайт применяем только для иконка-префаба (не для 3D модели)
         if (prefab == ingredientIconPrefab)

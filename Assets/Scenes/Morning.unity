@@ -6254,6 +6254,63 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &839592512
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 839592514}
+  - component: {fileID: 839592513}
+  m_Layer: 0
+  m_Name: ENDING
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &839592513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 839592512}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50e5669787913c34bb97698b6306beb6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndingScreen
+  victoryTitle: JUST IN TIME
+  victoryMessage: You and your bums will be in safe
+  defeatTitle: FRESH MEAT
+  defeatMessage: You wiil be with bums
+  titleFontSize: 72
+  messageFontSize: 28
+  victoryColor: {r: 1, g: 0.85, b: 0.25, a: 1}
+  defeatColor: {r: 0.9, g: 0.25, b: 0.2, a: 1}
+  customFont: {fileID: 0}
+  restartSceneName: Morning
+  mainMenuSceneName: MainMenu
+  fadeInDelay: 0.5
+  fadeInDuration: 1.2
+--- !u!4 &839592514
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 839592512}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2281.9368, y: -0.00002, z: -4274.1807}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &840732496
 GameObject:
   m_ObjectHideFlags: 0
@@ -6770,7 +6827,6 @@ MonoBehaviour:
     unwanted 'protection' from the mafia. Now you owe them 1000$ if you don't want
     to kick the bucket, you should give them this money in 3 days. Well... time to
     go dumpster diving, you budgeting genius."
-  gameOverScreen: {fileID: 882663149}
   globalFont: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
   onStoryFinished:
     m_PersistentCalls:
@@ -8829,6 +8885,56 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1357609340}
   m_Mesh: {fileID: 6416302070336371891, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
+--- !u!1 &1359770600
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1359770602}
+  - component: {fileID: 1359770601}
+  m_Layer: 0
+  m_Name: MyRecipeBook
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1359770601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1359770600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc52ca2e0d6ac0344a992245cb214aa2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RecipeBookUI
+  recipeSprite: {fileID: 21300000, guid: 694d70efa53d8c944b4e41873faed42e, type: 3}
+  recipesText: "\n\n\n\n\n\n  1. BURGER: Bun + Patty(Fried)\n  2. VODKA: VODKA(that's
+    all u need)\n  3. SALAD: Cucumber + Tomato"
+  panelColor: {r: 1, g: 1, b: 1, a: 0}
+  accentColor: {r: 1, g: 0.84, b: 0.25, a: 0}
+  customFont: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
+--- !u!4 &1359770602
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1359770600}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -496.1463, y: 0, z: 379.26987}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1361650164 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 59ae297c64ba2f14d8293eff237cce24, type: 3}
@@ -14065,3 +14171,5 @@ SceneRoots:
   - {fileID: 1985099373}
   - {fileID: 1879043477}
   - {fileID: 142169001}
+  - {fileID: 839592514}
+  - {fileID: 1359770602}

@@ -21,5 +21,10 @@ MonoBehaviour:
   tintColor: {r: 1, g: 0.8431373, b: 0, a: 1}
   rotParticlePrefab: {fileID: 0}
   modelPrefab: {fileID: 4177009731916593638, guid: 7a157820178443d43b8d133eed4f612a, type: 3}
-  visualOffset: {x: 0, y: 0, z: 0}
-  visualRotation: {x: 0, y: 0, z: 0}
+  countertopOffset: {x: 0, y: 0, z: 0}
+  countertopRotation: {x: 0, y: 0, z: 0}
+  plateOffset: {x: 0, y: 0, z: 0}
+  plateRotation: {x: 0, y: 0, z: 0}
+  playerHoldOffset: {x: 0, y: 0, z: 0}
+  playerHoldRotation: {x: 0, y: 0, z: 0}
+  visualScale: 100

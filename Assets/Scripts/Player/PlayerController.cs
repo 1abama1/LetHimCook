@@ -266,10 +266,11 @@ public class PlayerController : MonoBehaviour
 
             if (prefabToSpawn != null)
             {
-                _currentIngredientVisual = Instantiate(prefabToSpawn, holdAnchor.position, Quaternion.identity);
-                _currentIngredientVisual.transform.SetParent(holdAnchor, true);
-                _currentIngredientVisual.transform.localPosition += _heldIngredient.visualOffset;
-                _currentIngredientVisual.transform.localRotation *= Quaternion.Euler(_heldIngredient.visualRotation);
+                _currentIngredientVisual = Instantiate(prefabToSpawn, holdAnchor);
+                _currentIngredientVisual.transform.localPosition = _heldIngredient.playerHoldOffset;
+                _currentIngredientVisual.transform.localRotation = Quaternion.Euler(_heldIngredient.playerHoldRotation);
+                // Делим на 100 для коррекции масштаба моделей
+                _currentIngredientVisual.transform.localScale    = Vector3.one * (_heldIngredient.visualScale);
 
                 if (prefabToSpawn == ingredientVisualPrefab)
                 {
