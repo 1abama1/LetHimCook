@@ -26,6 +26,9 @@ public class CopNPC : MonoBehaviour
     public UnityEvent onCopSpotPlayer;
     public UnityEvent onArrestPlayer;
 
+    [Header("Visuals")]
+    public Light copSpotlight;
+
     private CopState  _state = CopState.Patrol;
     private int       _currentPoint;
     private Transform _player;
@@ -55,6 +58,13 @@ public class CopNPC : MonoBehaviour
             _animator.SetBool("IsWalking", isMoving);
         }
 
+        if (copSpotlight != null)
+        {
+            if (_state == CopState.Patrol) copSpotlight.color = Color.white;
+            else if (_state == CopState.Suspicious) copSpotlight.color = Color.yellow;
+            else if (_state == CopState.Chase || _state == CopState.Arrest) copSpotlight.color = Color.red;
+        }
+
         switch (_state)
         {
             case CopState.Patrol:     UpdatePatrol();     break;
@@ -66,10 +76,17 @@ public class CopNPC : MonoBehaviour
     void UpdatePatrol()
     {
         if (patrolPoints == null || patrolPoints.Length == 0) return;
+        if (CanSeePlayer()) { TransitionTo(CopState.Suspicious); return; }
+        if (_isWaiting) return;
+
         MoveTowards(patrolPoints[_currentPoint].position, patrolSpeed);
-        if (!_isWaiting && Vector3.Distance(transform.position, patrolPoints[_currentPoint].position) < 0.2f)
+
+        float dist = Vector3.Distance(
+            new Vector3(transform.position.x, 0, transform.position.z),
+            new Vector3(patrolPoints[_currentPoint].position.x, 0, patrolPoints[_currentPoint].position.z));
+
+        if (dist < 0.25f)
             StartCoroutine(WaitAndNext());
-        if (CanSeePlayer()) TransitionTo(CopState.Suspicious);
     }
 
     IEnumerator WaitAndNext()
@@ -148,8 +165,6 @@ public class CopNPC : MonoBehaviour
 
     void MoveTowards(Vector3 target, float speed)
     {
-        // Создаем целевую точку на той же высоте, что и коп сейчас, 
-        // чтобы он не пытался «нырнуть» к ногам игрока.
         Vector3 targetAtSameHeight = new Vector3(target.x, transform.position.y, target.z);
 
         Vector3 dir = (targetAtSameHeight - transform.position);
@@ -166,6 +181,13 @@ public class CopNPC : MonoBehaviour
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRange);
+
+        Vector3 leftBoundary = Quaternion.Euler(0, -visionAngle, 0) * transform.forward;
+        Vector3 rightBoundary = Quaternion.Euler(0, visionAngle, 0) * transform.forward;
+
+        Gizmos.DrawLine(transform.position, transform.position + leftBoundary * visionRange);
+        Gizmos.DrawLine(transform.position, transform.position + rightBoundary * visionRange);
+
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, arrestRange);
     }

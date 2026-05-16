@@ -65,6 +65,7 @@ public class MurderSystem : MonoBehaviour
         if (_cooldownTimer > 0) return;
         _cooldownTimer = attackCooldown;
         if (_animator != null) _animator.SetTrigger("Attack");
+        _player?.FreezeMovement(0.4f); // Небольшая пауза при атаке
         onAttack?.Invoke();
         AudioManager.Instance?.Play("attack");
 
@@ -73,7 +74,7 @@ public class MurderSystem : MonoBehaviour
         foreach (var hit in hits)
         {
             HomelessNPC homeless = hit.GetComponent<HomelessNPC>();
-            if (homeless != null) { homeless.Kill(); onKill?.Invoke(); AudioManager.Instance?.Play("kill"); }
+            if (homeless != null) { homeless.Kill(false); onKill?.Invoke(); AudioManager.Instance?.Play("kill"); }
         }
     }
 
@@ -87,7 +88,11 @@ public class MurderSystem : MonoBehaviour
             if (homeless != null && homeless.state != HomelessState.Dead)
             {
                 Debug.Log($"[Murder] Stealth killed {homeless.gameObject.name}!");
-                homeless.Kill();
+                homeless.Kill(true);
+                
+                if (_animator != null) _animator.SetTrigger("StealthKill");
+                _player?.FreezeMovement(1.5f); // Замораживаем на время анимации
+                
                 onStealthKill?.Invoke();
                 onKill?.Invoke();
                 AudioManager.Instance?.Play("stealth_kill");

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: adbeb561656d5d7429cccfd2bc55dd66, type: 3}
   m_Name: Ing_Patty_Rotten
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
-  ingredientName: Stale Patty
+  ingredientName: Patty
   sprite: {fileID: 0}
   rotLevel: 70
   cookedVersion: {fileID: 0}
@@ -21,3 +21,5 @@ MonoBehaviour:
   tintColor: {r: 0.4196079, g: 0.5568628, b: 0.1372549, a: 1}
   rotParticlePrefab: {fileID: 0}
   modelPrefab: {fileID: 5546137365737195193, guid: d92b24065230aff44acc5984fdc28643, type: 3}
+  visualOffset: {x: 0, y: 0, z: 0}
+  visualRotation: {x: 0, y: 0, z: 0}

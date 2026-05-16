@@ -1,167 +1,146 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Полоска прогресса в мировом пространстве.
+/// Работает на любом GameObject (не требует RectTransform).
+/// Сама создает дочерний Canvas-объект.
+/// </summary>
 public class WorldSpaceBar : MonoBehaviour
 {
-    private Slider slider;
-    private GameObject visualRoot;
+    private Slider     _slider;
+    private GameObject _visualRoot;
+    private Transform  _canvasTransform;
 
     void Awake()
     {
-        // Проверяем, есть ли RectTransform. На обычных префабах (Transform) 
-        // нельзя программно добавить Canvas, так как он требует RectTransform.
-        if (GetComponent<RectTransform>() == null)
-        {
-            Debug.LogError($"[WorldSpaceBar] Ошибка на {name}: Скрипт должен висеть на объекте с RectTransform (UI-объект).");
-            enabled = false;
-            return;
-        }
-
-        SetupCanvas();
-        CreateUI();
+        BuildCanvas();
     }
 
-    void SetupCanvas()
+    void BuildCanvas()
     {
-        Canvas canvas = GetComponent<Canvas>();
-        if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
-        
+        // Создаём дочерний объект, который будет Canvas-ом
+        var canvasGo = new GameObject("WSB_Canvas");
+        canvasGo.transform.SetParent(transform, false);
+        _canvasTransform = canvasGo.transform;
+
+        var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
 
-        RectTransform rt = GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(50f, 15f);
-        rt.localScale = Vector3.one * 0.01f; // масштаб для world space
+        var rt = canvasGo.GetComponent<RectTransform>();
+        rt.sizeDelta  = new Vector2(50f, 15f);
+        rt.localScale = Vector3.one * 0.01f;
 
-        CanvasScaler scaler = gameObject.GetComponent<CanvasScaler>() 
-                           ?? gameObject.AddComponent<CanvasScaler>();
+        var scaler = canvasGo.AddComponent<CanvasScaler>();
         scaler.dynamicPixelsPerUnit = 10f;
 
-        if (gameObject.GetComponent<GraphicRaycaster>() == null)
-            gameObject.AddComponent<GraphicRaycaster>();
+        canvasGo.AddComponent<GraphicRaycaster>();
+
+        BuildUI(rt);
     }
 
-    void CreateUI()
+    void BuildUI(RectTransform canvasRt)
     {
-        // --- visualRoot ---
-        visualRoot = new GameObject("VisualRoot");
-        visualRoot.transform.SetParent(transform, false);
+        // --- Корень ---
+        _visualRoot = new GameObject("VisualRoot");
+        _visualRoot.transform.SetParent(_canvasTransform, false);
 
-        RectTransform rootRt = visualRoot.AddComponent<RectTransform>();
+        var rootRt       = _visualRoot.AddComponent<RectTransform>();
         rootRt.anchorMin = Vector2.zero;
         rootRt.anchorMax = Vector2.one;
-        rootRt.offsetMin = Vector2.zero;
-        rootRt.offsetMax = Vector2.zero;
+        rootRt.offsetMin = rootRt.offsetMax = Vector2.zero;
 
         // --- Фон ---
-        GameObject bg = new GameObject("Background");
-        bg.transform.SetParent(visualRoot.transform, false);
-
-        RectTransform bgRt = bg.AddComponent<RectTransform>();
+        var bg   = new GameObject("BG");
+        bg.transform.SetParent(_visualRoot.transform, false);
+        var bgRt = bg.AddComponent<RectTransform>();
         bgRt.anchorMin = Vector2.zero;
         bgRt.anchorMax = Vector2.one;
-        bgRt.offsetMin = Vector2.zero;
-        bgRt.offsetMax = Vector2.zero;
-
-        Image bgImage = bg.AddComponent<Image>();
-        bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+        bgRt.offsetMin = bgRt.offsetMax = Vector2.zero;
+        bg.AddComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
 
         // --- Slider ---
-        GameObject sliderGo = new GameObject("Slider");
-        sliderGo.transform.SetParent(visualRoot.transform, false);
+        var sliderGo = new GameObject("Slider");
+        sliderGo.transform.SetParent(_visualRoot.transform, false);
 
-        RectTransform sliderRt = sliderGo.AddComponent<RectTransform>();
+        var sliderRt    = sliderGo.AddComponent<RectTransform>();
         sliderRt.anchorMin = Vector2.zero;
         sliderRt.anchorMax = Vector2.one;
         sliderRt.offsetMin = new Vector2(2f, 2f);
         sliderRt.offsetMax = new Vector2(-2f, -2f);
 
-        slider = sliderGo.AddComponent<Slider>();
-        slider.minValue = 0f;
-        slider.maxValue = 1f;
-        slider.value = 0f;
-        slider.interactable = false;
-        slider.wholeNumbers = false;
-        slider.direction = Slider.Direction.LeftToRight;
+        _slider             = sliderGo.AddComponent<Slider>();
+        _slider.minValue    = 0f;
+        _slider.maxValue    = 1f;
+        _slider.value       = 0f;
+        _slider.interactable = false;
+        _slider.direction   = Slider.Direction.LeftToRight;
 
-        // Background area слайдера
-        GameObject sliderBg = new GameObject("SliderBackground");
+        // Slider background
+        var sliderBg   = new GameObject("SliderBG");
         sliderBg.transform.SetParent(sliderGo.transform, false);
-
-        RectTransform sliderBgRt = sliderBg.AddComponent<RectTransform>();
+        var sliderBgRt = sliderBg.AddComponent<RectTransform>();
         sliderBgRt.anchorMin = Vector2.zero;
         sliderBgRt.anchorMax = Vector2.one;
-        sliderBgRt.offsetMin = Vector2.zero;
-        sliderBgRt.offsetMax = Vector2.zero;
-
-        Image sliderBgImg = sliderBg.AddComponent<Image>();
-        sliderBgImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-        slider.targetGraphic = sliderBgImg;
+        sliderBgRt.offsetMin = sliderBgRt.offsetMax = Vector2.zero;
+        var sliderBgImg      = sliderBg.AddComponent<Image>();
+        sliderBgImg.color    = new Color(0.2f, 0.2f, 0.2f, 1f);
+        _slider.targetGraphic = sliderBgImg;
 
         // Fill Area
-        GameObject fillArea = new GameObject("Fill Area");
+        var fillArea   = new GameObject("Fill Area");
         fillArea.transform.SetParent(sliderGo.transform, false);
-
-        RectTransform fillAreaRt = fillArea.AddComponent<RectTransform>();
-        fillAreaRt.anchorMin = Vector2.zero;
-        fillAreaRt.anchorMax = Vector2.one;
-        fillAreaRt.offsetMin = Vector2.zero;
-        fillAreaRt.offsetMax = Vector2.zero;
+        var faRt       = fillArea.AddComponent<RectTransform>();
+        faRt.anchorMin = Vector2.zero;
+        faRt.anchorMax = Vector2.one;
+        faRt.offsetMin = faRt.offsetMax = Vector2.zero;
 
         // Fill
-        GameObject fill = new GameObject("Fill");
+        var fill      = new GameObject("Fill");
         fill.transform.SetParent(fillArea.transform, false);
-
-        RectTransform fillRt = fill.AddComponent<RectTransform>();
+        var fillRt    = fill.AddComponent<RectTransform>();
         fillRt.anchorMin = Vector2.zero;
-        fillRt.anchorMax = new Vector2(1f, 1f);
-        fillRt.offsetMin = Vector2.zero;
-        fillRt.offsetMax = Vector2.zero;
+        fillRt.anchorMax = Vector2.one;
+        fillRt.offsetMin = fillRt.offsetMax = Vector2.zero;
+        fill.AddComponent<Image>().color = new Color(0.2f, 0.85f, 0.35f, 1f);
+        _slider.fillRect = fillRt;
 
-        Image fillImg = fill.AddComponent<Image>();
-        fillImg.color = new Color(0.2f, 0.85f, 0.35f, 1f); // зелёный прогресс
-
-        slider.fillRect = fillRt;
-
-        // Handle Slide Area (пустой, без ручки)
-        GameObject handleArea = new GameObject("Handle Slide Area");
+        // Handle (невидимый)
+        var handleArea = new GameObject("Handle Area");
         handleArea.transform.SetParent(sliderGo.transform, false);
+        var haRt       = handleArea.AddComponent<RectTransform>();
+        haRt.anchorMin = Vector2.zero;
+        haRt.anchorMax = Vector2.one;
+        haRt.offsetMin = haRt.offsetMax = Vector2.zero;
 
-        RectTransform handleAreaRt = handleArea.AddComponent<RectTransform>();
-        handleAreaRt.anchorMin = Vector2.zero;
-        handleAreaRt.anchorMax = Vector2.one;
-        handleAreaRt.offsetMin = Vector2.zero;
-        handleAreaRt.offsetMax = Vector2.zero;
-
-        GameObject handle = new GameObject("Handle");
+        var handle   = new GameObject("Handle");
         handle.transform.SetParent(handleArea.transform, false);
-
-        RectTransform handleRt = handle.AddComponent<RectTransform>();
-        handleRt.sizeDelta = Vector2.zero; // невидимая ручка
+        var handleRt = handle.AddComponent<RectTransform>();
+        handleRt.sizeDelta = Vector2.zero;
         handle.AddComponent<Image>().color = Color.clear;
+        _slider.handleRect = handleRt;
 
-        slider.handleRect = handleRt;
-
-        // По умолчанию скрыт
-        visualRoot.SetActive(false);
+        // Скрыт по умолчанию
+        _visualRoot.SetActive(false);
     }
 
     void Update()
     {
-        if (Camera.main != null)
+        // Полоска всегда смотрит на камеру
+        if (_canvasTransform != null && Camera.main != null)
         {
-            transform.LookAt(
-                transform.position + Camera.main.transform.rotation * Vector3.forward,
-                Camera.main.transform.rotation * Vector3.up
-            );
+            _canvasTransform.LookAt(
+                _canvasTransform.position + Camera.main.transform.rotation * Vector3.forward,
+                Camera.main.transform.rotation * Vector3.up);
         }
     }
 
     public void UpdateProgress(float progress)
     {
-        if (visualRoot != null)
-            visualRoot.SetActive(progress > 0f && progress < 1f);
+        if (_visualRoot != null)
+            _visualRoot.SetActive(progress > 0f && progress < 1f);
 
-        if (slider != null)
-            slider.value = progress;
+        if (_slider != null)
+            _slider.value = progress;
     }
 }

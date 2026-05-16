@@ -19,6 +19,7 @@ public class PlayerController : MonoBehaviour
     private bool      _isSprinting;
     private bool      _isSneaking;
     private bool      _isHiding;
+    private bool      _isLocked; // Блокировка движения (для анимаций)
 
     private IngredientData _heldIngredient;
     public  IngredientData HeldIngredient => _heldIngredient;
@@ -86,7 +87,7 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (_isHiding)
+        if (_isHiding || _isLocked)
         {
             _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, 0f);
             return;
@@ -152,6 +153,19 @@ public class PlayerController : MonoBehaviour
             foreach (var hit in Physics.OverlapSphere(transform.position, interactRange, mask))
                 hit.GetComponent<CookingStation>()?.HideIngredient();
         }
+    }
+
+    public void FreezeMovement(float duration)
+    {
+        StopCoroutine("FreezeRoutine");
+        StartCoroutine(FreezeRoutine(duration));
+    }
+
+    private System.Collections.IEnumerator FreezeRoutine(float duration)
+    {
+        _isLocked = true;
+        yield return new WaitForSeconds(duration);
+        _isLocked = false;
     }
 
     public bool IsHiding   => _isHiding;

@@ -76,20 +76,24 @@ public class HomelessNPC : MonoBehaviour, IInteractable
         onAlarmed?.Invoke();
     }
 
-    public void Kill()
+    public void Kill(bool isStealth = false)
     {
         if (state == HomelessState.Dead) return;
         state = HomelessState.Dead;
         GiveLoot(bonus: true);
         onMurdered?.Invoke(this);
-        StartCoroutine(DeathRoutine());
+        StartCoroutine(DeathRoutine(isStealth));
     }
 
-    IEnumerator DeathRoutine()
+    IEnumerator DeathRoutine(bool isStealth)
     {
         Animator anim = GetComponent<Animator>();
-        if (anim != null) anim.SetTrigger("Die");
-        yield return new WaitForSeconds(2f);
+        if (anim != null)
+        {
+            if (isStealth) anim.SetTrigger("StealthDie");
+            else anim.SetTrigger("Die");
+        }
+        yield return new WaitForSeconds(3f);
         gameObject.SetActive(false);
     }
 

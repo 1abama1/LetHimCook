@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: adbeb561656d5d7429cccfd2bc55dd66, type: 3}
   m_Name: Ing_Tomato_Poisonous
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
-  ingredientName: Poisonous Cucumber
+  ingredientName: Tomato
   sprite: {fileID: 0}
   rotLevel: 95
   cookedVersion: {fileID: 0}
@@ -21,3 +21,5 @@ MonoBehaviour:
   tintColor: {r: 0.4946947, g: 1, b: 0, a: 1}
   rotParticlePrefab: {fileID: 0}
   modelPrefab: {fileID: 6833057685428181737, guid: 84ca65119d0821449962b95ce5180b3c, type: 3}
+  visualOffset: {x: 0, y: 0, z: 0}
+  visualRotation: {x: 0, y: 0, z: 0}
