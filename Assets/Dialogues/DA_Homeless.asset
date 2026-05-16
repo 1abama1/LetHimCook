@@ -15,9 +15,9 @@ MonoBehaviour:
   nodes:
   - id: homeless_negotiate
     lines:
-    - speakerName: Bum 1
+    - speakerName: Bum
       text: Yo, what do you want?
-      voiceClip: {fileID: 0}
+      voiceClip: {fileID: 8300000, guid: 54d75881d2ddd1f48b8b06507e0dc3ed, type: 3}
       portrait: {fileID: 21300000, guid: 6bbd32c4356466847b308217649a08df, type: 3}
     choices:
     - buttonLabel: Sell me some ingredients.
@@ -29,9 +29,9 @@ MonoBehaviour:
     autoAdvance: 0
   - id: homeless_deal
     lines:
-    - speakerName: Bum 1
+    - speakerName: Bum
       text: Okay, take it, just don't touch me.
-      voiceClip: {fileID: 0}
+      voiceClip: {fileID: 8300000, guid: 54d75881d2ddd1f48b8b06507e0dc3ed, type: 3}
       portrait: {fileID: 21300000, guid: 6bbd32c4356466847b308217649a08df, type: 3}
     choices:
     - buttonLabel: Deal.
@@ -40,9 +40,9 @@ MonoBehaviour:
     autoAdvance: 0
   - id: homeless_hostile
     lines:
-    - speakerName: Bum 1
+    - speakerName: Bum
       text: WTF ARE YOU DOING?!
-      voiceClip: {fileID: 0}
+      voiceClip: {fileID: 8300000, guid: 54d75881d2ddd1f48b8b06507e0dc3ed, type: 3}
       portrait: {fileID: 21300000, guid: 6bbd32c4356466847b308217649a08df, type: 3}
     choices: []
     autoAdvance: 1
