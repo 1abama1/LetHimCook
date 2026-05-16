@@ -108,13 +108,14 @@ public class MurderSystem : MonoBehaviour
                 onStealthKill?.Invoke();
                 onKill?.Invoke();
                 AudioManager.Instance?.Play("stealth_kill");
+
                 if (NotificationManager.Instance != null)
                 {
-                    NotificationManager.Instance.ShowCustom("СКРЫТНОЕ УБИЙСТВО", Color.red);
+                    NotificationManager.Instance.ShowCustom("СКРЫТНОЕ УБИЙСТВО", new Color(1f, 0.2f, 0.2f));
                 }
 
                 killed = true;
-                break;
+                break; 
             }
         }
         

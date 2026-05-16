@@ -20,7 +20,13 @@ public class IngredientData : ScriptableObject
     public int baseValue = 5;
     public Color tintColor = Color.white;
     public GameObject rotParticlePrefab;
-    public GameObject modelPrefab; // 3D модель или специфичный префаб для этого ингредиента
-    public Vector3 visualOffset;   // Смещение модели (например, для булочки Z = -0.00927)
-    public Vector3 visualRotation; // Поворот модели (в градусах)
+    [Header("Visual Adjustment")]
+    public GameObject modelPrefab;
+    public Vector3 countertopOffset;
+    public Vector3 countertopRotation; // Поворот на столе
+    public Vector3 plateOffset;
+    public Vector3 plateRotation;      // Поворот на тарелке
+    public Vector3 playerHoldOffset;
+    public Vector3 playerHoldRotation; // Поворот в руках
+    public float   visualScale = 1f;
 }

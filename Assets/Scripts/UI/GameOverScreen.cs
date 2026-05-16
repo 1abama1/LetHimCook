@@ -301,6 +301,7 @@ public class GameOverScreen : MonoBehaviour
         go.transform.localPosition = new Vector3(0f, 700f, 0f);
 
         _particles = go.AddComponent<ParticleSystem>();
+        _particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         var main = _particles.main;
         main.loop             = true;

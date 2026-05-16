@@ -63,15 +63,22 @@ public class IngredientSelectUI : MonoBehaviour
     // ── Grid ───────────────────────────────────────────────────────
     private void RefreshGrid()
     {
-        foreach (Transform child in _grid)
-            Destroy(child.gameObject);
+        if (_grid == null) return;
 
-        if (PlayerEconomy.Instance == null) return;
+        foreach (Transform child in _grid)
+        {
+            if (child != null) Destroy(child.gameObject);
+        }
+
+        // ДОБАВЛЕНО: Проверяем не только синглтон, но и сам список на null
+        if (PlayerEconomy.Instance == null || PlayerEconomy.Instance.inventory == null) return;
 
         bool any = false;
         foreach (var stack in PlayerEconomy.Instance.inventory)
         {
-            if (stack.ingredient == null || stack.amount <= 0) continue;
+            // КРИТИЧЕСКАЯ ЗАЩИТА: Проверяем, что сам элемент stack не равен null
+            if (stack == null || stack.ingredient == null || stack.amount <= 0) continue;
+            
             CreateButton(stack.ingredient, stack.amount);
             any = true;
         }
@@ -268,7 +275,7 @@ public class IngredientSelectUI : MonoBehaviour
         // Контент (grid)
         var contentGo   = new GameObject("Content", typeof(RectTransform));
         contentGo.transform.SetParent(scrollGo.transform, false);
-        var contentRect = contentGo.AddComponent<RectTransform>();
+        var contentRect = contentGo.GetComponent<RectTransform>();
         contentRect.anchorMin = new Vector2(0f, 1f);
         contentRect.anchorMax = new Vector2(1f, 1f);
         contentRect.pivot     = new Vector2(0.5f, 1f);

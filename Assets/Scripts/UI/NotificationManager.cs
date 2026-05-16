@@ -122,11 +122,7 @@ public class NotificationManager : MonoBehaviour
         textRt.offsetMax = new Vector2(-15f, 0f);
 
         TextMeshProUGUI tmp = textGo.AddComponent<TextMeshProUGUI>();
-        
-        // Применяем глобальный шрифт
-        if (StoryManager.Instance != null)
-            StoryManager.ApplyFont(tmp);
-
+        StoryManager.ApplyFont(tmp); // Применяем кастомный шрифт
         tmp.text = text;
         tmp.fontSize = 16f;
         tmp.color = color;
@@ -163,14 +159,26 @@ public class NotificationManager : MonoBehaviour
             yield return null;
         }
 
-        Destroy(item);
+        if (item != null) Destroy(item);
     }
 
     // ── Построение контейнера на Canvas ─────────────────────────────
     private void BuildContainer()
     {
         // Ищем существующий HUD Canvas на сцене
-        Canvas hudCanvas = FindFirstObjectByType<Canvas>();
+        Canvas hudCanvas = null;
+        Canvas[] allCanvases = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+        foreach(var c in allCanvases)
+        {
+            if (c.renderMode == RenderMode.ScreenSpaceOverlay && c.gameObject.name.Contains("HUD"))
+            {
+                hudCanvas = c;
+                break;
+            }
+        }
+        
+        if (hudCanvas == null && allCanvases.Length > 0) hudCanvas = allCanvases[0];
+
         Transform parentTransform = hudCanvas != null ? hudCanvas.transform : null;
 
         // Если Canvas не найден, делаем свой временный overlay
@@ -184,6 +192,7 @@ public class NotificationManager : MonoBehaviour
             cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             cs.referenceResolution = new Vector2(1920, 1080);
             parentTransform = canvasGo.transform;
+            DontDestroyOnLoad(canvasGo);
         }
 
         _container = new GameObject("NotificationContainer", typeof(RectTransform));

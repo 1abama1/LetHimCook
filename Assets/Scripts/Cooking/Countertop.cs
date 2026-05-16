@@ -120,10 +120,11 @@ public class Countertop : MonoBehaviour, IInteractable
 
             if (prefab != null)
             {
-                _currentVisual = Instantiate(prefab, itemAnchor.position, Quaternion.identity);
-                _currentVisual.transform.SetParent(itemAnchor, true);
-                _currentVisual.transform.localPosition += storedIngredient.visualOffset;
-                _currentVisual.transform.localRotation *= Quaternion.Euler(storedIngredient.visualRotation);
+                _currentVisual = Instantiate(prefab, itemAnchor);
+                _currentVisual.transform.localPosition = storedIngredient.countertopOffset;
+                _currentVisual.transform.localRotation = Quaternion.Euler(storedIngredient.countertopRotation);
+                // Делим на 100 для коррекции масштаба моделей
+                _currentVisual.transform.localScale    = Vector3.one * (storedIngredient.visualScale * 0.01f);
 
                 // Спрайт применяем только для иконка-префаба
                 if (prefab == ingredientIconPrefab)
