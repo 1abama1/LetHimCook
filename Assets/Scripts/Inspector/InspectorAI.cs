@@ -39,10 +39,15 @@ public class InspectorAI : MonoBehaviour
     private int              _currentWaypoint;
     private CookingStation[] _stations;
     private bool             _surpriseTurning;
+    private WaitForSeconds _waitAtWaypoint;
+    private WaitForSeconds _oneSecond = new WaitForSeconds(1f);
+    private WaitForSeconds _surpriseTurnWait;
 
     void Start()
     {
         _stations = FindObjectsByType<CookingStation>(FindObjectsSortMode.None);
+        _waitAtWaypoint = new WaitForSeconds(waitAtWaypointSeconds);
+        _surpriseTurnWait = new WaitForSeconds(surpriseTurnDuration);
         StartCoroutine(SurpriseTurnRoutine());
     }
 
@@ -79,7 +84,7 @@ public class InspectorAI : MonoBehaviour
     {
         _state = InspectorState.Watch;
         onInspectorWatching?.Invoke();
-        yield return new WaitForSeconds(waitAtWaypointSeconds);
+        yield return _waitAtWaypoint;
         _currentWaypoint = (_currentWaypoint + 1) % waypoints.Length;
         _state = InspectorState.Roam;
     }
@@ -116,7 +121,7 @@ public class InspectorAI : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(1f);
+            yield return _oneSecond;
             if (!_surpriseTurning && Random.value < surpriseTurnChance)
                 StartCoroutine(DoSurpriseTurn());
         }
@@ -129,7 +134,7 @@ public class InspectorAI : MonoBehaviour
         transform.eulerAngles = new Vector3(0f, original.y + 180f, 0f);
         _state = InspectorState.TurnBack;
 
-        yield return new WaitForSeconds(surpriseTurnDuration);
+        yield return _surpriseTurnWait;
 
         transform.eulerAngles = original;
         _state = InspectorState.Watch;

@@ -25,6 +25,9 @@ public class ClientNPC : MonoBehaviour
 
     public UnityEvent onClientAngry;
 
+    // Свойство для быстрого доступа ко всем живым клиентам
+    public static readonly System.Collections.Generic.List<ClientNPC> ActiveClients = new System.Collections.Generic.List<ClientNPC>();
+
     // ── Private state ──────────────────────────────────────────────
     private enum State
     {
@@ -48,6 +51,7 @@ public class ClientNPC : MonoBehaviour
     private GameObject _patienceSliderGO;
     private GameObject _orderBubbleGO;
     private Canvas     _worldCanvas;
+    private Camera     _mainCamera;
 
     // ── Init ───────────────────────────────────────────────────────
     public void Init(ClientSpawner spawner)
@@ -62,11 +66,15 @@ public class ClientNPC : MonoBehaviour
         }
 
         _currentPatience = patienceTime;
+        _mainCamera      = Camera.main;
 
         CreateWorldCanvas();
         CreatePatienceSlider();
         CreateOrderBubble();
     }
+
+    void OnEnable()  => ActiveClients.Add(this);
+    void OnDisable() => ActiveClients.Remove(this);
 
     // ── UI Creation ────────────────────────────────────────────────
 
@@ -187,6 +195,7 @@ public class ClientNPC : MonoBehaviour
         var tmp = labelGO.AddComponent<TextMeshProUGUI>();
         if (tmp != null)
         {
+            StoryManager.ApplyFont(tmp);
             tmp.text      = wantedRecipe != null ? wantedRecipe.recipeName : "?";
             tmp.fontSize  = 10f;
             tmp.alignment = TextAlignmentOptions.Center;
@@ -220,8 +229,8 @@ public class ClientNPC : MonoBehaviour
     void Update()
     {
         // Canvas всегда смотрит на камеру
-        if (_worldCanvas != null && Camera.main != null)
-            _worldCanvas.transform.rotation = Camera.main.transform.rotation;
+        if (_worldCanvas != null && _mainCamera != null)
+            _worldCanvas.transform.rotation = _mainCamera.transform.rotation;
 
         // Цвет слайдера по уровню терпения
         UpdateSliderColor();

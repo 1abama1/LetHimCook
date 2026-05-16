@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-
 using UnityEngine.InputSystem;
 
 /// <summary>
@@ -50,7 +49,7 @@ public class IngredientSelectUI : MonoBehaviour
 
     public void Close()
     {
-        _panel.SetActive(false);
+        if (_panel != null) _panel.SetActive(false);
         IsOpen = false;
         _pendingPlayer = null;
     }
@@ -79,9 +78,10 @@ public class IngredientSelectUI : MonoBehaviour
 
         if (!any)
         {
-            var emptyGo  = new GameObject("Empty");
+            var emptyGo  = new GameObject("Empty", typeof(RectTransform));
             emptyGo.transform.SetParent(_grid, false);
             var emptyTmp = emptyGo.AddComponent<TextMeshProUGUI>();
+            StoryManager.ApplyFont(emptyTmp);
             emptyTmp.text      = "Инвентарь пуст";
             emptyTmp.fontSize  = 18f;
             emptyTmp.alignment = TextAlignmentOptions.Center;
@@ -92,7 +92,7 @@ public class IngredientSelectUI : MonoBehaviour
     private void CreateButton(IngredientData ingredient, int count)
     {
         // ── Карточка ──────────────────────────────────────────────
-        var card    = new GameObject("Card_" + ingredient.ingredientName);
+        var card    = new GameObject("Card_" + ingredient.ingredientName, typeof(RectTransform));
         card.transform.SetParent(_grid, false);
 
         var cardImg = card.AddComponent<Image>();
@@ -113,7 +113,7 @@ public class IngredientSelectUI : MonoBehaviour
         btn.onClick.AddListener(() => OnSelect(captured));
 
         // ── Иконка ────────────────────────────────────────────────
-        var iconGo  = new GameObject("Icon");
+        var iconGo  = new GameObject("Icon", typeof(RectTransform));
         iconGo.transform.SetParent(card.transform, false);
         var iconImg  = iconGo.AddComponent<Image>();
         iconImg.preserveAspect = true;
@@ -126,9 +126,10 @@ public class IngredientSelectUI : MonoBehaviour
         iconRect.offsetMin = iconRect.offsetMax = Vector2.zero;
 
         // ── Название ──────────────────────────────────────────────
-        var nameGo  = new GameObject("Name");
+        var nameGo  = new GameObject("Name", typeof(RectTransform));
         nameGo.transform.SetParent(card.transform, false);
         var nameTmp = nameGo.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(nameTmp);
         nameTmp.text      = ingredient.ingredientName;
         nameTmp.fontSize  = 11f;
         nameTmp.alignment = TextAlignmentOptions.Center;
@@ -142,7 +143,7 @@ public class IngredientSelectUI : MonoBehaviour
         nameRect.offsetMax = new Vector2(-4, -2);
 
         // ── Бейдж кол-ва ──────────────────────────────────────────
-        var badgeGo  = new GameObject("Badge");
+        var badgeGo  = new GameObject("Badge", typeof(RectTransform));
         badgeGo.transform.SetParent(card.transform, false);
         var badgeImg = badgeGo.AddComponent<Image>();
         badgeImg.color = new Color(0.15f, 0.65f, 0.35f, 1f);
@@ -152,9 +153,10 @@ public class IngredientSelectUI : MonoBehaviour
         badgeRect.anchorMax = new Vector2(1f,    1f);
         badgeRect.offsetMin = badgeRect.offsetMax = Vector2.zero;
 
-        var cntGo  = new GameObject("Cnt");
+        var cntGo  = new GameObject("Cnt", typeof(RectTransform));
         cntGo.transform.SetParent(badgeGo.transform, false);
         var cntTmp = cntGo.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(cntTmp);
         cntTmp.text      = count.ToString();
         cntTmp.fontSize  = 14f;
         cntTmp.fontStyle = FontStyles.Bold;
@@ -175,7 +177,7 @@ public class IngredientSelectUI : MonoBehaviour
         if (economy == null || economy.GetIngredientCount(ingredient) <= 0)
         {
             Debug.Log("[IngredientSelect] Уже нет в наличии!");
-            RefreshGrid(); // обновить — вдруг кончилось
+            RefreshGrid();
             return;
         }
 
@@ -192,7 +194,7 @@ public class IngredientSelectUI : MonoBehaviour
     private void BuildUI()
     {
         // Canvas
-        var cvGo = new GameObject("IngSelectCanvas");
+        var cvGo = new GameObject("IngSelectCanvas", typeof(RectTransform));
         cvGo.transform.SetParent(transform);
         var cv = cvGo.AddComponent<Canvas>();
         cv.renderMode    = RenderMode.ScreenSpaceOverlay;
@@ -204,7 +206,7 @@ public class IngredientSelectUI : MonoBehaviour
         cvGo.AddComponent<GraphicRaycaster>();
 
         // Тёмный фон
-        var overlayGo  = new GameObject("Overlay");
+        var overlayGo  = new GameObject("Overlay", typeof(RectTransform));
         overlayGo.transform.SetParent(cvGo.transform, false);
         var overlayImg = overlayGo.AddComponent<Image>();
         overlayImg.color = new Color(0f, 0f, 0f, 0.6f);
@@ -214,7 +216,7 @@ public class IngredientSelectUI : MonoBehaviour
         overlayBtn.onClick.AddListener(Close);
 
         // Панель
-        _panel = new GameObject("Panel");
+        _panel = new GameObject("Panel", typeof(RectTransform));
         _panel.transform.SetParent(cvGo.transform, false);
         var panelImg  = _panel.AddComponent<Image>();
         panelImg.color = new Color(0.10f, 0.10f, 0.14f, 0.97f);
@@ -224,9 +226,10 @@ public class IngredientSelectUI : MonoBehaviour
         panelRect.offsetMin = panelRect.offsetMax = Vector2.zero;
 
         // Заголовок
-        var titleGo  = new GameObject("Title");
+        var titleGo  = new GameObject("Title", typeof(RectTransform));
         titleGo.transform.SetParent(_panel.transform, false);
         var titleTmp = titleGo.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(titleTmp);
         titleTmp.text      = "ВЫБЕРИТЕ ИНГРЕДИЕНТ";
         titleTmp.fontSize  = 24f;
         titleTmp.fontStyle = FontStyles.Bold;
@@ -238,9 +241,10 @@ public class IngredientSelectUI : MonoBehaviour
         titleRect.offsetMin = titleRect.offsetMax = Vector2.zero;
 
         // Подсказка
-        var hintGo  = new GameObject("Hint");
+        var hintGo  = new GameObject("Hint", typeof(RectTransform));
         hintGo.transform.SetParent(_panel.transform, false);
         var hintTmp = hintGo.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(hintTmp);
         hintTmp.text      = "[Esc] или кликни за пределами — закрыть";
         hintTmp.fontSize  = 13f;
         hintTmp.alignment = TextAlignmentOptions.Center;
@@ -251,7 +255,7 @@ public class IngredientSelectUI : MonoBehaviour
         hintRect.offsetMin = hintRect.offsetMax = Vector2.zero;
 
         // ScrollView
-        var scrollGo   = new GameObject("Scroll");
+        var scrollGo   = new GameObject("Scroll", typeof(RectTransform));
         scrollGo.transform.SetParent(_panel.transform, false);
         var scrollRect = scrollGo.AddComponent<ScrollRect>();
         var scrollR    = scrollGo.GetComponent<RectTransform>();
@@ -262,7 +266,7 @@ public class IngredientSelectUI : MonoBehaviour
         scrollBg.color = new Color(0.06f, 0.06f, 0.09f, 0.4f);
 
         // Контент (grid)
-        var contentGo   = new GameObject("Content");
+        var contentGo   = new GameObject("Content", typeof(RectTransform));
         contentGo.transform.SetParent(scrollGo.transform, false);
         var contentRect = contentGo.AddComponent<RectTransform>();
         contentRect.anchorMin = new Vector2(0f, 1f);

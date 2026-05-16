@@ -21,6 +21,7 @@ public class InteractionPrompt : MonoBehaviour
     private CanvasGroup     _group;
     private Transform       _player;
     private Vector3         _baseLocalPos;
+    private Camera          _mainCamera;
 
     void Awake()
     {
@@ -36,15 +37,16 @@ public class InteractionPrompt : MonoBehaviour
         _group.blocksRaycasts  = false;
         _group.interactable    = false;
 
-        // Создаём текст
-        GameObject textGo = new GameObject("PromptText");
+        // ИСПРАВЛЕНИЕ: Создаём текст СРАЗУ с RectTransform в конструкторе
+        GameObject textGo = new GameObject("PromptText", typeof(RectTransform));
         textGo.transform.SetParent(transform, false);
-        RectTransform textRt = textGo.AddComponent<RectTransform>();
+        RectTransform textRt = textGo.GetComponent<RectTransform>();
         textRt.anchorMin = Vector2.zero;
         textRt.anchorMax = Vector2.one;
         textRt.offsetMin = textRt.offsetMax = Vector2.zero;
 
         _label                = textGo.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(_label);
         _label.text           = promptText;
         _label.color          = promptColor;
         _label.fontSize       = 18f;
@@ -56,6 +58,7 @@ public class InteractionPrompt : MonoBehaviour
 
     void Start()
     {
+        _mainCamera = Camera.main;
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p) _player = p.transform;
     }
@@ -73,8 +76,8 @@ public class InteractionPrompt : MonoBehaviour
         transform.localPosition = _baseLocalPos + Vector3.up * bob;
 
         // Billboarding — всегда смотрит на камеру
-        if (Camera.main != null)
-            transform.LookAt(transform.position + Camera.main.transform.rotation * Vector3.forward,
-                             Camera.main.transform.rotation * Vector3.up);
+        if (_mainCamera != null)
+            transform.LookAt(transform.position + _mainCamera.transform.rotation * Vector3.forward,
+                             _mainCamera.transform.rotation * Vector3.up);
     }
 }

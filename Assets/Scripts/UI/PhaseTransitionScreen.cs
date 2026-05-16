@@ -39,6 +39,9 @@ public class PhaseTransitionScreen : MonoBehaviour
         canvasGroup.alpha          = 0f;
         canvasGroup.blocksRaycasts = false;
 
+        StoryManager.ApplyFont(phaseLabel);
+        StoryManager.ApplyFont(subtitleLabel);
+
         if (GameManager.Instance != null)
         {
             GameManager.Instance.onNightBegin.AddListener(ShowNightTransition);

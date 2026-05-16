@@ -24,6 +24,9 @@ public class StoryManager : MonoBehaviour
     [Header("End Screen")]
     public GameOverScreen gameOverScreen;
 
+    [Header("UI Theme")]
+    public TMP_FontAsset globalFont;
+
     [Header("Events")]
     public UnityEvent onStoryFinished;
     public UnityEvent onGameWin;
@@ -216,9 +219,10 @@ public class StoryManager : MonoBehaviour
     // ── Постройка интерфейса ──────────────────────────────────────────────────
     void BuildProgrammaticUI()
     {
-        // 1. Canvas
-        GameObject canvasGO = new GameObject("[StoryUI]");
-        canvasGO.transform.SetParent(transform, false);
+        // 1. Canvas — оставляем корневым (БЕЗ SetParent к StoryManager), чтобы он сразу подхватывал размеры экрана
+        GameObject canvasGO = new GameObject("[StoryUI]", typeof(RectTransform));
+        DontDestroyOnLoad(canvasGO); // Так как StoryManager не уничтожается, Canvas тоже должен жить между сценами
+        
         _uiCanvas = canvasGO.AddComponent<Canvas>();
         _uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         _uiCanvas.sortingOrder = 998;
@@ -228,38 +232,40 @@ public class StoryManager : MonoBehaviour
         sc.referenceResolution = new Vector2(1920, 1080);
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // 2. Black BG
-        GameObject bgGO = new GameObject("BlackBG");
+        // 2. Black BG — создаем сразу как RectTransform
+        GameObject bgGO = new GameObject("BlackBG", typeof(RectTransform));
         bgGO.transform.SetParent(canvasGO.transform, false);
         Image bgImg = bgGO.AddComponent<Image>();
         bgImg.color = Color.black;
         Stretch(bgGO.GetComponent<RectTransform>());
 
-        // 3. Story Label
-        GameObject storyGO = new GameObject("StoryLabel");
+        // 3. Story Label — создаем сразу как RectTransform
+        GameObject storyGO = new GameObject("StoryLabel", typeof(RectTransform));
         storyGO.transform.SetParent(canvasGO.transform, false);
         _storyLabel = storyGO.AddComponent<TextMeshProUGUI>();
+        ApplyFont(_storyLabel);
         _storyLabel.alignment = TextAlignmentOptions.Center;
         _storyLabel.fontSize = 28f;
         _storyLabel.enableWordWrapping = true;
         Stretch(storyGO.GetComponent<RectTransform>(), 100f);
 
-        // 4. Summary Panel
-        _summaryPanel = new GameObject("SummaryPanel");
+        // 4. Summary Panel — создаем сразу как RectTransform
+        _summaryPanel = new GameObject("SummaryPanel", typeof(RectTransform));
         _summaryPanel.transform.SetParent(canvasGO.transform, false);
         Image sBg = _summaryPanel.AddComponent<Image>();
         sBg.color = new Color(0, 0, 0, 0.85f);
         Stretch(_summaryPanel.GetComponent<RectTransform>(), 400f, 250f);
 
-        GameObject sTextGO = new GameObject("SummaryText");
+        GameObject sTextGO = new GameObject("SummaryText", typeof(RectTransform));
         sTextGO.transform.SetParent(_summaryPanel.transform, false);
         _summaryText = sTextGO.AddComponent<TextMeshProUGUI>();
+        ApplyFont(_summaryText);
         _summaryText.alignment = TextAlignmentOptions.Center;
         _summaryText.fontSize = 24f;
         Stretch(sTextGO.GetComponent<RectTransform>(), 20f, 80f);
 
-        // Button
-        GameObject btnGO = new GameObject("ContinueBtn");
+        // Button — создаем сразу как RectTransform
+        GameObject btnGO = new GameObject("ContinueBtn", typeof(RectTransform));
         btnGO.transform.SetParent(_summaryPanel.transform, false);
         Image bImg = btnGO.AddComponent<Image>();
         bImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
@@ -273,18 +279,20 @@ public class StoryManager : MonoBehaviour
         bRT.sizeDelta = new Vector2(200, 50);
         bRT.anchoredPosition = new Vector2(0, 30);
 
-        GameObject bTextGO = new GameObject("Text");
+        GameObject bTextGO = new GameObject("Text", typeof(RectTransform));
         bTextGO.transform.SetParent(btnGO.transform, false);
         TMP_Text bt = bTextGO.AddComponent<TextMeshProUGUI>();
+        ApplyFont(bt);
         bt.text = "ПРОДОЛЖИТЬ";
         bt.alignment = TextAlignmentOptions.Center;
         bt.fontSize = 18f;
         Stretch(bTextGO.GetComponent<RectTransform>());
 
-        // 5. HUD Debt
-        GameObject hudGO = new GameObject("DebtHUD");
+        // 5. HUD Debt — создаем сразу как RectTransform
+        GameObject hudGO = new GameObject("DebtHUD", typeof(RectTransform));
         hudGO.transform.SetParent(canvasGO.transform, false);
         _debtHudLabel = hudGO.AddComponent<TextMeshProUGUI>();
+        ApplyFont(_debtHudLabel);
         _debtHudLabel.fontSize = 20f;
         _debtHudLabel.alignment = TextAlignmentOptions.TopRight;
         RectTransform hRT = hudGO.GetComponent<RectTransform>();
@@ -314,5 +322,13 @@ public class StoryManager : MonoBehaviour
             yield return null;
         }
         txt.alpha = to;
+    }
+
+    public static void ApplyFont(TMP_Text text)
+    {
+        if (Instance != null && Instance.globalFont != null && text != null)
+        {
+            text.font = Instance.globalFont;
+        }
     }
 }

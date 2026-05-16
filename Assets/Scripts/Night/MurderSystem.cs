@@ -18,6 +18,7 @@ public class MurderSystem : MonoBehaviour
     private Animator _animator;
     private PlayerController _player;
     private UnityEngine.InputSystem.InputAction _attackAction;
+    private Collider[] _hitColliders = new Collider[10];
 
     void Awake()
     {
@@ -77,10 +78,10 @@ public class MurderSystem : MonoBehaviour
         AudioManager.Instance?.Play("attack");
 
         Vector3 hitPoint = transform.position + transform.forward * (attackRange * 0.5f);
-        Collider[] hits = Physics.OverlapSphere(hitPoint, attackRange, hitLayer);
-        foreach (var hit in hits)
+        int hitsCount = Physics.OverlapSphereNonAlloc(hitPoint, attackRange, _hitColliders, hitLayer);
+        for (int i = 0; i < hitsCount; i++)
         {
-            HomelessNPC homeless = hit.GetComponent<HomelessNPC>();
+            HomelessNPC homeless = _hitColliders[i].GetComponent<HomelessNPC>();
             if (homeless != null) { homeless.Kill(false); onKill?.Invoke(); AudioManager.Instance?.Play("kill"); }
         }
     }
@@ -91,10 +92,11 @@ public class MurderSystem : MonoBehaviour
         _cooldownTimer = attackCooldown;
 
         Vector3 hitPoint = transform.position + transform.forward * (stealthKillRange * 0.5f);
-        Collider[] hits = Physics.OverlapSphere(hitPoint, stealthKillRange, hitLayer);
-        foreach (var hit in hits)
+        int hitsCount = Physics.OverlapSphereNonAlloc(hitPoint, stealthKillRange, _hitColliders, hitLayer);
+        bool killed = false;
+        for (int i = 0; i < hitsCount; i++)
         {
-            HomelessNPC homeless = hit.GetComponent<HomelessNPC>();
+            HomelessNPC homeless = _hitColliders[i].GetComponent<HomelessNPC>();
             if (homeless != null && homeless.state != HomelessState.Dead)
             {
                 Debug.Log($"[Murder] Stealth killed {homeless.gameObject.name}!");
@@ -106,11 +108,17 @@ public class MurderSystem : MonoBehaviour
                 onStealthKill?.Invoke();
                 onKill?.Invoke();
                 AudioManager.Instance?.Play("stealth_kill");
+                if (NotificationManager.Instance != null)
+                {
+                    NotificationManager.Instance.ShowCustom("СКРЫТНОЕ УБИЙСТВО", Color.red);
+                }
+
+                killed = true;
                 break;
             }
         }
         
-        if (hits.Length == 0) Debug.Log("[Murder] Tried stealth kill, but missed.");
+        if (!killed) Debug.Log("[Murder] Tried stealth kill, but missed.");
     }
 
     public float StealthKillProgress => _player.IsSneaking

@@ -51,6 +51,8 @@ public class GameHUD : MonoBehaviour
     private MurderSystem          _murderSystem;
     private FlashlightController  _flashlight;
     private List<Button>          _choiceButtons = new List<Button>();
+    private int                   _lastSecond = -1;
+    private GamePhase             _lastPhase = (GamePhase)(-1);
 
     void Start()
     {
@@ -112,6 +114,10 @@ public class GameHUD : MonoBehaviour
         UpdateReputation(RestaurantReputation.Instance?.reputation ?? 50f);
         UpdateBattery(1f);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+
+        // Применяем кастомный шрифт ко всем элементам HUD
+        ApplyGlobalFonts();
+
         bool isNight = GameManager.Instance?.currentPhase == GamePhase.Night;
         SetBatteryGroupVisible(isNight);
         HideDialogue();
@@ -122,10 +128,20 @@ public class GameHUD : MonoBehaviour
         if (GameManager.Instance != null)
         {
             float t = GameManager.Instance.phaseTimer;
-            if (phaseTimerText != null)
-                phaseTimerText.text = $"{Mathf.FloorToInt(t / 60):D2}:{Mathf.FloorToInt(t % 60):D2}";
-            if (phaseLabel != null)
-                phaseLabel.text = GameManager.Instance.currentPhase == GamePhase.Night ? "НОЧЬ" : "ДЕНЬ";
+            int currentSecond = Mathf.FloorToInt(t);
+            if (currentSecond != _lastSecond)
+            {
+                _lastSecond = currentSecond;
+                if (phaseTimerText != null)
+                    phaseTimerText.text = $"{currentSecond / 60:D2}:{currentSecond % 60:D2}";
+            }
+
+            if (GameManager.Instance.currentPhase != _lastPhase)
+            {
+                _lastPhase = GameManager.Instance.currentPhase;
+                if (phaseLabel != null)
+                    phaseLabel.text = _lastPhase == GamePhase.Night ? "НОЧЬ" : "ДЕНЬ";
+            }
         }
 
         if (_murderSystem != null && stealthKillUI != null)
@@ -300,4 +316,17 @@ public class GameHUD : MonoBehaviour
     }
 
     public void OnBribeButtonPressed() => FindFirstObjectByType<InspectorAI>()?.TryBribe();
+
+    private void ApplyGlobalFonts()
+    {
+        StoryManager.ApplyFont(moneyText);
+        StoryManager.ApplyFont(freshCountText);
+        StoryManager.ApplyFont(spoiledCountText);
+        StoryManager.ApplyFont(lootCountText);
+        StoryManager.ApplyFont(phaseTimerText);
+        StoryManager.ApplyFont(phaseLabel);
+        StoryManager.ApplyFont(batteryText);
+        StoryManager.ApplyFont(speakerNameText);
+        StoryManager.ApplyFont(dialogueBodyText);
+    }
 }

@@ -365,6 +365,7 @@ public class GameOverScreen : MonoBehaviour
         GameObject go = new GameObject(name);
         go.transform.SetParent(parent, false);
         var t = go.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(t);
         t.fontSize  = fontSize;
         t.fontStyle = style;
         t.alignment = alignment;
@@ -405,6 +406,7 @@ public class GameOverScreen : MonoBehaviour
         GameObject labelGO = new GameObject("Label");
         labelGO.transform.SetParent(go.transform, false);
         TMP_Text txt        = labelGO.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(txt);
         txt.text            = label;
         txt.fontSize        = 15f;
         txt.fontStyle       = FontStyles.Bold;

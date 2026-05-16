@@ -20,6 +20,8 @@ public class PlayerController : MonoBehaviour
     private bool      _isSneaking;
     private bool      _isHiding;
     private bool      _isLocked; // Блокировка движения (для анимаций)
+    private Collider[] _interactHits = new Collider[10];
+    private WaitForSeconds _freezeWait;
 
     private IngredientData _heldIngredient;
     public  IngredientData HeldIngredient => _heldIngredient;
@@ -123,12 +125,13 @@ public class PlayerController : MonoBehaviour
     {
         int mask = interactableLayer == 0 ? ~0 : interactableLayer.value;
 
-        Collider[]    hits    = Physics.OverlapSphere(transform.position, interactRange, mask);
+        int hitsCount = Physics.OverlapSphereNonAlloc(transform.position, interactRange, _interactHits, mask);
         float         closest = float.MaxValue;
         IInteractable target  = null;
 
-        foreach (var hit in hits)
+        for (int i = 0; i < hitsCount; i++)
         {
+            Collider hit = _interactHits[i];
             if (hit.gameObject == gameObject) continue;
             float dist = Vector3.Distance(transform.position, hit.transform.position);
             IInteractable ia = hit.GetComponent<IInteractable>();
@@ -152,8 +155,9 @@ public class PlayerController : MonoBehaviour
         if (_isHiding)
         {
             int mask = interactableLayer == 0 ? ~0 : interactableLayer.value;
-            foreach (var hit in Physics.OverlapSphere(transform.position, interactRange, mask))
-                hit.GetComponent<CookingStation>()?.HideIngredient();
+            int hitsCount = Physics.OverlapSphereNonAlloc(transform.position, interactRange, _interactHits, mask);
+            for (int i = 0; i < hitsCount; i++)
+                _interactHits[i].GetComponent<CookingStation>()?.HideIngredient();
         }
     }
 
@@ -166,7 +170,8 @@ public class PlayerController : MonoBehaviour
     private System.Collections.IEnumerator FreezeRoutine(float duration)
     {
         _isLocked = true;
-        yield return new WaitForSeconds(duration);
+        if (_freezeWait == null) _freezeWait = new WaitForSeconds(duration);
+        yield return _freezeWait;
         _isLocked = false;
     }
 

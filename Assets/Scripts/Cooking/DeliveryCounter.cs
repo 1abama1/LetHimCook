@@ -42,9 +42,8 @@ public class DeliveryCounter : MonoBehaviour, IInteractable
             AudioManager.Instance?.Play("order_success");
 
             // Уведомляем клиента
-            ClientNPC[] clients = Object.FindObjectsByType<ClientNPC>(FindObjectsSortMode.None);
             bool clientFound = false;
-            foreach (ClientNPC c in clients)
+            foreach (ClientNPC c in ClientNPC.ActiveClients)
             {
                 // ВАЖНО: Ищем только того, кто УЖЕ подошел к окну и хочет именно этот рецепт
                 if (c.IsAtWindow && c.WantedRecipe == matched) 

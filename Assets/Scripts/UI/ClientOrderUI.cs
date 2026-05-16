@@ -19,6 +19,7 @@ public class ClientOrderUI : MonoBehaviour
     private Image           _patienceBar;
     private Image           _patienceFill;
     private ClientNPC       _client;
+    private Camera          _mainCamera;
 
     void Awake()
     {
@@ -33,15 +34,16 @@ public class ClientOrderUI : MonoBehaviour
         rt.localScale = Vector3.one * 0.012f;
         rt.localPosition = Vector3.up * (billboardHeight / rt.localScale.y);
 
-        // --- Имя блюда ---
-        GameObject labelGo = new GameObject("DishLabel");
+        // ИСПРАВЛЕНИЕ: Добавлен typeof(RectTransform) для всех вложенных UI-элементов
+        GameObject labelGo = new GameObject("DishLabel", typeof(RectTransform));
         labelGo.transform.SetParent(transform, false);
-        RectTransform labelRt = labelGo.AddComponent<RectTransform>();
+        RectTransform labelRt = labelGo.GetComponent<RectTransform>();
         labelRt.anchorMin    = new Vector2(0f, 0.5f);
         labelRt.anchorMax    = new Vector2(1f, 1f);
         labelRt.offsetMin    = labelRt.offsetMax = Vector2.zero;
 
         _dishLabel = labelGo.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(_dishLabel);
         _dishLabel.text      = "?";
         _dishLabel.fontSize  = 16f;
         _dishLabel.alignment = TextAlignmentOptions.Center;
@@ -49,9 +51,9 @@ public class ClientOrderUI : MonoBehaviour
         _dishLabel.color     = Color.white;
 
         // --- Patience bar background ---
-        GameObject barBg = new GameObject("PatienceBarBg");
+        GameObject barBg = new GameObject("PatienceBarBg", typeof(RectTransform));
         barBg.transform.SetParent(transform, false);
-        RectTransform barBgRt = barBg.AddComponent<RectTransform>();
+        RectTransform barBgRt = barBg.GetComponent<RectTransform>();
         barBgRt.anchorMin = new Vector2(0.05f, 0f);
         barBgRt.anchorMax = new Vector2(0.95f, 0.45f);
         barBgRt.offsetMin = barBgRt.offsetMax = Vector2.zero;
@@ -59,9 +61,9 @@ public class ClientOrderUI : MonoBehaviour
         bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
 
         // --- Patience fill ---
-        GameObject barFill = new GameObject("PatienceFill");
+        GameObject barFill = new GameObject("PatienceFill", typeof(RectTransform));
         barFill.transform.SetParent(barBg.transform, false);
-        RectTransform fillRt = barFill.AddComponent<RectTransform>();
+        RectTransform fillRt = barFill.GetComponent<RectTransform>();
         fillRt.anchorMin = Vector2.zero;
         fillRt.anchorMax = Vector2.one;
         fillRt.offsetMin = new Vector2(2f, 2f);
@@ -70,9 +72,9 @@ public class ClientOrderUI : MonoBehaviour
         _patienceFill.color = patienceHighColor;
 
         // Создаём слайдер поверх
-        GameObject sliderGo = new GameObject("PatienceSlider");
+        GameObject sliderGo = new GameObject("PatienceSlider", typeof(RectTransform));
         sliderGo.transform.SetParent(barBg.transform, false);
-        RectTransform sliderRt = sliderGo.AddComponent<RectTransform>();
+        RectTransform sliderRt = sliderGo.GetComponent<RectTransform>();
         sliderRt.anchorMin = Vector2.zero;
         sliderRt.anchorMax = Vector2.one;
         sliderRt.offsetMin = new Vector2(2f, 2f);
@@ -87,12 +89,12 @@ public class ClientOrderUI : MonoBehaviour
         slider.targetGraphic = bgImg;
 
         // Пустой handle
-        GameObject handleArea = new GameObject("HandleArea");
+        GameObject handleArea = new GameObject("HandleArea", typeof(RectTransform));
         handleArea.transform.SetParent(sliderGo.transform, false);
         handleArea.AddComponent<RectTransform>();
-        GameObject handle = new GameObject("Handle");
+        GameObject handle = new GameObject("Handle", typeof(RectTransform));
         handle.transform.SetParent(handleArea.transform, false);
-        RectTransform handleRt = handle.AddComponent<RectTransform>();
+        RectTransform handleRt = handle.GetComponent<RectTransform>();
         handleRt.sizeDelta = Vector2.zero;
         handle.AddComponent<Image>().color = Color.clear;
         slider.handleRect = handleRt;
@@ -102,6 +104,7 @@ public class ClientOrderUI : MonoBehaviour
 
     void Start()
     {
+        _mainCamera = Camera.main;
         if (_client != null && _client.wantedRecipe != null)
             _dishLabel.text = _client.wantedRecipe.recipeName;
     }
@@ -111,9 +114,9 @@ public class ClientOrderUI : MonoBehaviour
         if (_client == null) return;
 
         // Billboarding
-        if (Camera.main != null)
-            transform.LookAt(transform.position + Camera.main.transform.rotation * Vector3.forward,
-                             Camera.main.transform.rotation * Vector3.up);
+        if (_mainCamera != null)
+            transform.LookAt(transform.position + _mainCamera.transform.rotation * Vector3.forward,
+                             _mainCamera.transform.rotation * Vector3.up);
 
         // Обновляем цвет терпения
         float t = _client.PatiencePercent;
