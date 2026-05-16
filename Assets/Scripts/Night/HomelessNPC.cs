@@ -17,6 +17,7 @@ public class HomelessNPC : MonoBehaviour, IInteractable
 
     public int junkLootAmount = 1;
     public int moneyLoot      = 0;
+    public Sprite lootPortrait;
 
     [Header("Dialogue")]
     public string negotiateDialogueId  = "homeless_negotiate";
@@ -80,7 +81,6 @@ public class HomelessNPC : MonoBehaviour, IInteractable
     {
         if (state == HomelessState.Dead) return;
         state = HomelessState.Dead;
-        GiveLoot(bonus: true);
         onMurdered?.Invoke(this);
         StartCoroutine(DeathRoutine(isStealth));
     }
@@ -93,7 +93,9 @@ public class HomelessNPC : MonoBehaviour, IInteractable
             if (isStealth) anim.SetTrigger("StealthDie");
             else anim.SetTrigger("Die");
         }
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(1.5f);
+        GiveLoot(bonus: true);
+        yield return new WaitForSeconds(1.5f);
         gameObject.SetActive(false);
     }
 
@@ -104,25 +106,58 @@ public class HomelessNPC : MonoBehaviour, IInteractable
         if (_lootTaken && !bonus) return;
         _lootTaken = true;
 
+        string lootText = "";
+        int itemsFound = 0;
+
         // Основные ингредиенты
         foreach (var ing in ingredientLoot)
-            if (ing != null) PlayerEconomy.Instance?.AddIngredient(ing);
+        {
+            if (ing != null) 
+            { 
+                PlayerEconomy.Instance?.AddIngredient(ing);
+                lootText += $"- {ing.ingredientName}\n";
+                itemsFound++;
+            }
+        }
 
         // Бонус при убийстве
         if (bonus)
         {
             foreach (var ing in bonusKillLoot)
-                if (ing != null) PlayerEconomy.Instance?.AddIngredient(ing);
+            {
+                if (ing != null) 
+                { 
+                    PlayerEconomy.Instance?.AddIngredient(ing);
+                    lootText += $"- {ing.ingredientName} (Bonus)\n";
+                    itemsFound++;
+                }
+            }
         }
 
         // Хлам и деньги
-        if (junkLootAmount > 0)
-            PlayerEconomy.Instance?.AddResource(ResourceType.JunkLoot,
-                junkLootAmount + (bonus ? 2 : 0));
+        int finalJunk = junkLootAmount + (bonus ? 2 : 0);
+        if (finalJunk > 0)
+        {
+            PlayerEconomy.Instance?.AddResource(ResourceType.JunkLoot, finalJunk);
+            lootText += $"- Junk x{finalJunk}\n";
+            itemsFound++;
+        }
 
         int totalMoney = moneyLoot;
-        if (totalMoney > 0) PlayerEconomy.Instance?.EarnMoney(totalMoney);
+        if (totalMoney > 0) 
+        {
+            PlayerEconomy.Instance?.EarnMoney(totalMoney);
+            lootText += $"- ${totalMoney}\n";
+            itemsFound++;
+        }
 
-        Debug.Log($"[HomelessNPC] Выдан лут. Бонус убийства: {bonus}");
+        if (itemsFound > 0)
+        {
+            DialogueSystem.Instance?.ShowDynamicDialogue("Loot", "You found:\n" + lootText, lootPortrait);
+        }
+        else
+        {
+            DialogueSystem.Instance?.ShowDynamicDialogue("Loot", "Nothing found.", lootPortrait);
+        }
     }
 }

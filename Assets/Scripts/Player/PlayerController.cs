@@ -13,25 +13,24 @@ public class PlayerController : MonoBehaviour
     public float     interactRange     = 1.5f;
     public LayerMask interactableLayer = ~0;
 
-    private Rigidbody _rb;
-    private Animator  _animator;
-    private Vector3   _moveInput;
-    private bool      _isSprinting;
-    private bool      _isSneaking;
-    private bool      _isHiding;
-    private bool      _isLocked;
-    private bool      _isInDialogue;
+    private Rigidbody  _rb;
+    private Animator   _animator;
+    private Vector3    _moveInput;
+    private bool       _isSprinting;
+    private bool       _isSneaking;
+    private bool       _isHiding;
+    private bool       _isLocked;
+    private bool       _isInDialogue;
+    private Coroutine  _freezeCoroutine;
     private Collider[] _interactHits = new Collider[10];
-    private WaitForSeconds _freezeWait;
 
     private IngredientData _heldIngredient;
     public  IngredientData HeldIngredient => _heldIngredient;
-
-    public Plate HeldPlate { get; private set; }
+    public  Plate HeldPlate { get; private set; }
 
     [Header("Hold Settings")]
-    public Transform holdAnchor;            // якорь над головой
-    public GameObject ingredientVisualPrefab; // префаб визуала ингредиента (SpriteRenderer или 3D)
+    public Transform  holdAnchor;
+    public GameObject ingredientVisualPrefab;
 
     private GameObject _currentIngredientVisual;
 
@@ -47,7 +46,7 @@ public class PlayerController : MonoBehaviour
         _rb       = GetComponent<Rigidbody>();
         _animator = GetComponent<Animator>();
 
-        _rb.constraints = RigidbodyConstraints.FreezeRotation;
+        _rb.constraints  = RigidbodyConstraints.FreezeRotation;
         _rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         _playerInput = GetComponent<PlayerInput>();
@@ -66,13 +65,19 @@ public class PlayerController : MonoBehaviour
         if (_isInDialogue)
         {
             _moveInput = Vector3.zero;
-            if (_animator != null) _animator.SetFloat("Speed", 0f);
+            UpdateAnimator();
             return;
         }
 
+        bool interactPressed = (_interactAction != null && _interactAction.WasPressedThisFrame())
+                            || (Keyboard.current?.eKey.wasPressedThisFrame ?? false);
+        bool hidePressed     = (_hideAction != null && _hideAction.WasPressedThisFrame())
+                            || (Keyboard.current?.fKey.wasPressedThisFrame ?? false);
+
+        if (interactPressed) TryInteract();
+        if (hidePressed)     ToggleHide();
+
         Vector2 raw = Vector2.zero;
-        
-        // Чтение ввода: приоритет у Input System, запасной - WASD на клавиатуре
         if (_moveAction != null) raw = _moveAction.ReadValue<Vector2>();
         else if (Keyboard.current != null)
         {
@@ -80,19 +85,18 @@ public class PlayerController : MonoBehaviour
             raw.y = (Keyboard.current.wKey.isPressed ? 1 : 0) - (Keyboard.current.sKey.isPressed ? 1 : 0);
         }
 
+        if (_isLocked || _isHiding)
+        {
+            _moveInput = Vector3.zero;
+            UpdateAnimator();
+            return;
+        }
+
         _moveInput   = new Vector3(raw.x, 0f, raw.y);
-        
-        // Объединенная логика кнопок
         _isSprinting = _sprintAction?.IsPressed() ?? false;
-        
+
         if (_sneakAction != null && _sneakAction.WasPressedThisFrame())
             _isSneaking = !_isSneaking;
-
-        bool interactPressed = (_interactAction != null && _interactAction.WasPressedThisFrame()) || (Keyboard.current?.eKey.wasPressedThisFrame ?? false);
-        bool hidePressed     = (_hideAction != null && _hideAction.WasPressedThisFrame())     || (Keyboard.current?.fKey.wasPressedThisFrame ?? false);
-
-        if (interactPressed) TryInteract();
-        if (hidePressed)     ToggleHide();
 
         UpdateAnimator();
     }
@@ -110,7 +114,7 @@ public class PlayerController : MonoBehaviour
         if (_isSneaking)  speed *= sneakMultiplier;
 
         Vector3 velocity = _moveInput.normalized * speed;
-        velocity.y = _rb.linearVelocity.y;          // Preserve gravity
+        velocity.y = _rb.linearVelocity.y;
         _rb.linearVelocity = velocity;
 
         if (_moveInput.sqrMagnitude > 0.01f)
@@ -132,29 +136,28 @@ public class PlayerController : MonoBehaviour
         _isInDialogue = locked;
         if (locked)
         {
-            _moveInput = Vector3.zero;
+            _moveInput   = Vector3.zero;
             _isSprinting = false;
             if (_rb != null) _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, 0f);
-            if (_animator != null) _animator.SetFloat("Speed", 0f);
         }
+        UpdateAnimator();
     }
 
     void UpdateAnimator()
     {
         if (_animator == null) return;
-        _animator.SetFloat("Speed",      _moveInput.magnitude);
-        _animator.SetBool("IsSneaking",  _isSneaking);
-        _animator.SetBool("IsHiding",    _isHiding);
-        _animator.SetBool("IsCarrying",  HeldIngredient != null || HeldPlate != null);
+        _animator.SetFloat("Speed",     _moveInput.magnitude);
+        _animator.SetBool("IsSneaking", _isSneaking);
+        _animator.SetBool("IsHiding",   _isHiding);
+        _animator.SetBool("IsCarrying", HeldIngredient != null || HeldPlate != null);
     }
 
     public void TryInteract()
     {
         int mask = interactableLayer == 0 ? ~0 : interactableLayer.value;
-
         int hitsCount = Physics.OverlapSphereNonAlloc(transform.position, interactRange, _interactHits, mask);
-        float         closest = float.MaxValue;
-        IInteractable target  = null;
+        float closest = float.MaxValue;
+        IInteractable target = null;
 
         for (int i = 0; i < hitsCount; i++)
         {
@@ -165,15 +168,7 @@ public class PlayerController : MonoBehaviour
             if (ia != null && dist < closest) { closest = dist; target = ia; }
         }
 
-        if (target != null)
-        {
-            Debug.Log($"[Player] Interacted with {((MonoBehaviour)target).gameObject.name}");
-            target.Interact(this);
-        }
-        else
-        {
-            Debug.Log("[Player] Tried to interact");
-        }
+        target?.Interact(this);
     }
 
     public void ToggleHide()
@@ -190,24 +185,23 @@ public class PlayerController : MonoBehaviour
 
     public void FreezeMovement(float duration)
     {
-        StopCoroutine("FreezeRoutine");
-        StartCoroutine(FreezeRoutine(duration));
+        if (_freezeCoroutine != null) StopCoroutine(_freezeCoroutine);
+        _freezeCoroutine = StartCoroutine(FreezeRoutine(duration));
     }
 
     private System.Collections.IEnumerator FreezeRoutine(float duration)
     {
         _isLocked = true;
-        if (_freezeWait == null) _freezeWait = new WaitForSeconds(duration);
-        yield return _freezeWait;
-        _isLocked = false;
+        yield return new WaitForSeconds(duration);
+        _isLocked        = false;
+        _freezeCoroutine = null;
     }
 
-    public bool IsHiding   => _isHiding;
+    public bool IsHiding    => _isHiding;
     public bool IsSneaking  => _isSneaking;
     public bool IsSprinting => _isSprinting;
     public bool IsMoving    => _moveInput.sqrMagnitude > 0.01f;
 
-    // ── Ингредиент ──────────────────────────────────────────────
     public void GiveIngredient(IngredientData ing)
     {
         _heldIngredient = ing;
@@ -222,7 +216,6 @@ public class PlayerController : MonoBehaviour
         return ing;
     }
 
-    // ── Тарелка ────────────────────────────────────────────────
     public void GivePlate(Plate plate)
     {
         HeldPlate = plate;
@@ -233,11 +226,8 @@ public class PlayerController : MonoBehaviour
                 plate.transform.SetParent(holdAnchor);
                 plate.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.Euler(90f, 0f, 0f));
             }
-
-            // Отключаем физику на тарелке, пока она в руках
             foreach (var col in plate.GetComponentsInChildren<Collider>())
                 col.enabled = false;
-            
             var rb = plate.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = true;
         }
@@ -251,11 +241,8 @@ public class PlayerController : MonoBehaviour
         if (plate != null)
         {
             plate.transform.SetParent(null);
-
-            // Возвращаем физику
             foreach (var col in plate.GetComponentsInChildren<Collider>())
                 col.enabled = true;
-                
             var rb = plate.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = false;
         }
@@ -265,18 +252,17 @@ public class PlayerController : MonoBehaviour
 
     void UpdateHoldVisual()
     {
-        // 1. Уничтожаем старый визуал ингредиента
         if (_currentIngredientVisual != null)
         {
             Destroy(_currentIngredientVisual);
             _currentIngredientVisual = null;
         }
 
-        // 2. Создаём новый визуал, если игрок держит ингредиент
         if (_heldIngredient != null && holdAnchor != null)
         {
-            // Если у ингредиента есть своя модель — используем её, иначе общий префаб
-            GameObject prefabToSpawn = _heldIngredient.modelPrefab != null ? _heldIngredient.modelPrefab : ingredientVisualPrefab;
+            GameObject prefabToSpawn = _heldIngredient.modelPrefab != null
+                ? _heldIngredient.modelPrefab
+                : ingredientVisualPrefab;
 
             if (prefabToSpawn != null)
             {
@@ -285,28 +271,23 @@ public class PlayerController : MonoBehaviour
                 _currentIngredientVisual.transform.localPosition += _heldIngredient.visualOffset;
                 _currentIngredientVisual.transform.localRotation *= Quaternion.Euler(_heldIngredient.visualRotation);
 
-                // Настраиваем визуал только если используем общий префаб (спрайтовый)
                 if (prefabToSpawn == ingredientVisualPrefab)
                 {
-                    // Поддержка 2D-спрайтов
                     var sr = _currentIngredientVisual.GetComponent<SpriteRenderer>();
                     if (sr != null && _heldIngredient.sprite != null)
                         sr.sprite = _heldIngredient.sprite;
 
-                    // Поддержка UI-Image (Canvas в world-space)
                     var img = _currentIngredientVisual.GetComponentInChildren<UnityEngine.UI.Image>();
                     if (img != null && _heldIngredient.sprite != null)
                         img.sprite = _heldIngredient.sprite;
                 }
 
-                // ОТКЛЮЧАЕМ ФИЗИКУ ДЛЯ ПРЕДМЕТА В РУКАХ
                 foreach (var col in _currentIngredientVisual.GetComponentsInChildren<Collider>())
                     col.enabled = false;
                 var rb = _currentIngredientVisual.GetComponent<Rigidbody>();
                 if (rb != null) rb.isKinematic = true;
             }
         }
-        // Тарелка уже привязана через SetParent в GivePlate / TakePlate — ничего дополнительного не нужно.
     }
 
     void OnDrawGizmosSelected()

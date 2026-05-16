@@ -41,7 +41,6 @@ public class MurderSystem : MonoBehaviour
 
         if (_attackAction == null) return;
         
-        // Блокируем убийства во время диалога
         if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsActive)
         {
             _stealthHoldTimer = 0f;
@@ -73,7 +72,7 @@ public class MurderSystem : MonoBehaviour
         if (_cooldownTimer > 0) return;
         _cooldownTimer = attackCooldown;
         if (_animator != null) _animator.SetTrigger("Attack");
-        _player?.FreezeMovement(0.4f); // Небольшая пауза при атаке
+        _player?.FreezeMovement(0.4f);
         onAttack?.Invoke();
         AudioManager.Instance?.Play("attack");
 
@@ -99,26 +98,19 @@ public class MurderSystem : MonoBehaviour
             HomelessNPC homeless = _hitColliders[i].GetComponent<HomelessNPC>();
             if (homeless != null && homeless.state != HomelessState.Dead)
             {
-                Debug.Log($"[Murder] Stealth killed {homeless.gameObject.name}!");
                 homeless.Kill(true);
-                
                 if (_animator != null) _animator.SetTrigger("StealthKill");
-                _player?.FreezeMovement(1.5f); // Замораживаем на время анимации
-                
+                _player?.FreezeMovement(1.5f);
                 onStealthKill?.Invoke();
                 onKill?.Invoke();
                 AudioManager.Instance?.Play("stealth_kill");
-                if (NotificationManager.Instance != null)
-                {
-                    NotificationManager.Instance.ShowCustom("СКРЫТНОЕ УБИЙСТВО", Color.red);
-                }
-
+                NotificationManager.Instance?.ShowCustom("STEALTH KILL", Color.red);
                 killed = true;
                 break;
             }
         }
-        
-        if (!killed) Debug.Log("[Murder] Tried stealth kill, but missed.");
+
+        if (!killed) _stealthHoldTimer = 0f;
     }
 
     public float StealthKillProgress => _player.IsSneaking

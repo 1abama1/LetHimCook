@@ -36,10 +36,32 @@ public class DialogueSystem : MonoBehaviour
         _isActive         = true;
         _currentNPC       = npc;
         _currentPlayer    = player;
-        _currentLineIndex = 0;
-        _currentNode      = node;
 
         if (_currentPlayer != null) _currentPlayer.SetDialogueLock(true);
+
+        PlayNode(node);
+    }
+
+    public void ShowDynamicDialogue(string title, string text, Sprite portrait = null)
+    {
+        DialogueNode node = new DialogueNode();
+        node.id = "dynamic";
+        
+        DialogueLine line = new DialogueLine();
+        line.speakerName = title;
+        line.text = text;
+        line.portrait = portrait;
+        node.lines.Add(line);
+
+        DialogueChoice choice = new DialogueChoice();
+        choice.buttonLabel = "Take";
+        choice.nextDialogueId = ""; // Закроет диалог
+        node.choices.Add(choice);
+
+        _isActive = true;
+        if (_currentPlayer == null) _currentPlayer = FindFirstObjectByType<PlayerController>();
+        if (_currentPlayer != null) _currentPlayer.SetDialogueLock(true);
+        _currentNPC = null;
 
         PlayNode(node);
     }
@@ -82,27 +104,66 @@ public class DialogueSystem : MonoBehaviour
 
     void ProceedToChoices()
     {
-        if (_currentNode.choices == null || _currentNode.choices.Count == 0)
-            { EndDialogue(); return; }
-        onShowChoices?.Invoke(_currentNode.choices);
+        var valid = _currentNode.choices?.FindAll(
+            c => c != null && !string.IsNullOrWhiteSpace(c.buttonLabel));
+
+        if (valid == null || valid.Count == 0)
+        {
+            EndDialogue();
+            return;
+        }
+
+        onShowChoices?.Invoke(valid);
     }
 
     public void SelectChoice(int index)
     {
-        if (_currentNode.choices == null || index >= _currentNode.choices.Count) return;
-        DialogueChoice choice = _currentNode.choices[index];
+        Debug.Log($"[DialogueSystem] SelectChoice({index}) called.");
+        if (_currentNode == null) 
+        {
+            Debug.Log("[DialogueSystem] Current node is null! Ignoring.");
+            return;
+        }
+
+        var valid = _currentNode.choices?.FindAll(
+            c => c != null && !string.IsNullOrWhiteSpace(c.buttonLabel));
+
+        if (valid == null || index >= valid.Count) 
+        { 
+            Debug.Log($"[DialogueSystem] Valid choices is null or index {index} out of bounds. Ending dialogue.");
+            EndDialogue(); 
+            return; 
+        }
+
+        DialogueChoice choice = valid[index];
+        Debug.Log($"[DialogueSystem] Choice selected: {choice.buttonLabel}, NextNode: {choice.nextDialogueId}");
 
         if (!string.IsNullOrEmpty(choice.callbackMethod) && _currentNPC != null)
+        {
+            Debug.Log($"[DialogueSystem] Calling callback: {choice.callbackMethod}");
             _currentNPC.SendMessage(choice.callbackMethod, SendMessageOptions.DontRequireReceiver);
+        }
 
         if (!string.IsNullOrEmpty(choice.nextDialogueId))
         {
             DialogueNode next = FindNode(choice.nextDialogueId);
-            if (next != null) { PlayNode(next); return; }
+            if (next != null) 
+            { 
+                Debug.Log($"[DialogueSystem] Proceeding to node: {next.id}");
+                PlayNode(next); 
+                return; 
+            }
+            else
+            {
+                Debug.Log($"[DialogueSystem] Next node {choice.nextDialogueId} not found!");
+            }
         }
 
+        Debug.Log("[DialogueSystem] No next node. Ending dialogue.");
         EndDialogue();
     }
+
+    public void CloseDialogue() => EndDialogue();
 
     void EndDialogue()
     {

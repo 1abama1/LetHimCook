@@ -16,15 +16,6 @@ public class StealthIndicator : MonoBehaviour
     public Image   sprintIcon;          // иконка бежит
     public Image   hidingIcon;          // иконка прячется
 
-    [Header("Flashlight Battery")]
-    public Image              batteryFill;   // Image filled, горизонтальный
-    public TextMeshProUGUI    batteryText;
-    public Color              batteryFullColor  = new Color(0.3f, 0.9f, 0.4f);
-    public Color              batteryLowColor   = new Color(0.9f, 0.2f, 0.1f);
-    public Image              flashlightOnIcon; // иконка фонарика (вкл/выкл)
-    public Color              flashlightOnTint  = Color.yellow;
-    public Color              flashlightOffTint = new Color(0.4f, 0.4f, 0.4f);
-
     [Header("Cop Suspicion Ring")]
     [Tooltip("Отдельный кольцевой индикатор подозрения Копа (ночью)")]
     public Image copSuspicionRing;
@@ -32,8 +23,7 @@ public class StealthIndicator : MonoBehaviour
     public Color copSuspicionHigh = Color.red;
 
     private PlayerController     _player;
-    private FlashlightController _flashlight;
-    private CopNPC               _cop;
+    private CopNPC[]             _cops;
 
     void Start()
     {
@@ -41,10 +31,9 @@ public class StealthIndicator : MonoBehaviour
         if (p != null)
         {
             _player     = p.GetComponent<PlayerController>();
-            _flashlight = p.GetComponent<FlashlightController>();
         }
 
-        _cop = FindFirstObjectByType<CopNPC>();
+        _cops = FindObjectsByType<CopNPC>(FindObjectsSortMode.None);
 
         // Инициализируем иконки
         SetActive(sneakIcon,   false);
@@ -55,7 +44,6 @@ public class StealthIndicator : MonoBehaviour
     void Update()
     {
         UpdateStateIcons();
-        UpdateFlashlight();
         UpdateCopSuspicion();
     }
 
@@ -71,34 +59,23 @@ public class StealthIndicator : MonoBehaviour
         SetActive(sprintIcon,  _player.IsSprinting && !_player.IsSneaking);
     }
 
-    // ─── Батарейка фонарика ───────────────────────────────────────────────────
-    void UpdateFlashlight()
-    {
-        if (_flashlight == null) return;
-
-        float pct = _flashlight.BatteryPercent;
-
-        if (batteryFill != null)
-        {
-            batteryFill.fillAmount = pct;
-            batteryFill.color = Color.Lerp(batteryLowColor, batteryFullColor, pct);
-        }
-
-        if (batteryText != null)
-            batteryText.text = $"{Mathf.RoundToInt(pct * 100f)}%";
-
-        if (flashlightOnIcon != null)
-            flashlightOnIcon.color = _flashlight.IsOn ? flashlightOnTint : flashlightOffTint;
-    }
-
     // ─── Подозрение Копа ─────────────────────────────────────────────────────
     void UpdateCopSuspicion()
     {
-        if (_cop == null || copSuspicionRing == null) return;
+        if (copSuspicionRing == null) return;
 
-        float t = _cop.SuspicionPercent;
-        copSuspicionRing.fillAmount = t;
-        copSuspicionRing.color      = Color.Lerp(copSuspicionLow, copSuspicionHigh, t);
+        float maxSus = 0f;
+        if (_cops != null)
+        {
+            foreach (var c in _cops)
+            {
+                if (c != null && (c.SuspicionPercent * 100f) > maxSus) 
+                    maxSus = c.SuspicionPercent * 100f;
+            }
+        }
+
+        copSuspicionRing.fillAmount = maxSus / 100f;
+        copSuspicionRing.color      = Color.Lerp(copSuspicionLow, copSuspicionHigh, maxSus / 100f);
     }
 
     // ─── Утилита ─────────────────────────────────────────────────────────────

@@ -72,7 +72,7 @@ public class IngredientSelectUI : MonoBehaviour
             emptyGo.transform.SetParent(_grid, false);
             var emptyTmp = emptyGo.AddComponent<TextMeshProUGUI>();
             StoryManager.ApplyFont(emptyTmp);
-            emptyTmp.text      = "Инвентарь пуст";
+            emptyTmp.text      = "Inventory is empty";
             emptyTmp.fontSize  = 18f;
             emptyTmp.alignment = TextAlignmentOptions.Center;
             emptyTmp.color     = new Color(0.6f, 0.6f, 0.6f);
@@ -209,7 +209,7 @@ public class IngredientSelectUI : MonoBehaviour
         titleGo.transform.SetParent(_panel.transform, false);
         var titleTmp = titleGo.AddComponent<TextMeshProUGUI>();
         StoryManager.ApplyFont(titleTmp);
-        titleTmp.text      = "ВЫБЕРИТЕ ИНГРЕДИЕНТ";
+        titleTmp.text      = "SELECT INGREDIENT";
         titleTmp.fontSize  = 24f;
         titleTmp.fontStyle = FontStyles.Bold;
         titleTmp.alignment = TextAlignmentOptions.Center;
@@ -223,7 +223,7 @@ public class IngredientSelectUI : MonoBehaviour
         hintGo.transform.SetParent(_panel.transform, false);
         var hintTmp = hintGo.AddComponent<TextMeshProUGUI>();
         StoryManager.ApplyFont(hintTmp);
-        hintTmp.text      = "[Esc] или кликни за пределами — закрыть";
+        hintTmp.text      = "[Esc] or click outside to close";
         hintTmp.fontSize  = 13f;
         hintTmp.alignment = TextAlignmentOptions.Center;
         hintTmp.color     = new Color(0.55f, 0.55f, 0.6f);
