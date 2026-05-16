@@ -23,11 +23,11 @@ public class PhaseTransitionScreen : MonoBehaviour
     public Color nightColor = new Color(0.05f, 0.05f, 0.15f, 1f);
     public Color dayColor   = new Color(0.95f, 0.85f, 0.5f,  1f);
 
-    [Header("Texts")]
-    public string nightTitle    = "НОЧЬ";
-    public string nightSubtitle = "Найди продукты. Не попадись.";
-    public string dayTitle      = "ДЕНЬ";
-    public string daySubtitle   = "Готовь. Корми. Не попались.";
+    [Header("Text Settings")]
+    public string nightTitle    = "NIGHT";
+    public string nightSubtitle = "Find ingredients. Don't get caught.";
+    public string dayTitle      = "DAY";
+    public string daySubtitle   = "Cook. Serve. Survive.";
 
     public UnityEvent onTransitionComplete;
 

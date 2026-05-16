@@ -7,6 +7,7 @@ public class Dumpster : MonoBehaviour, IInteractable
     public int  minSpoiled     = 1;
     public int  maxSpoiled     = 4;
     public int  junkLootChance = 50;
+    public Sprite lootPortrait;
     public bool alreadySearched;
 
     [Tooltip("Пул просроченных IngredientData, которые могут выпасть из бака. " +
@@ -35,8 +36,16 @@ public class Dumpster : MonoBehaviour, IInteractable
         }
 
         if (Random.Range(0, 100) < junkLootChance)
-            PlayerEconomy.Instance?.AddResource(ResourceType.JunkLoot, Random.Range(1, 3));
-
+        {
+            int amount = Random.Range(1, 3);
+            PlayerEconomy.Instance?.AddResource(ResourceType.JunkLoot, amount);
+            DialogueSystem.Instance?.ShowDynamicDialogue("Dumpster", $"You searched the dumpster and found:\n- Junk x{amount}", lootPortrait);
+        }
+        else
+        {
+            DialogueSystem.Instance?.ShowDynamicDialogue("Dumpster", "You searched the dumpster, but found nothing.", lootPortrait);
+        }
+        
         if (searchParticlePrefab != null)
             Instantiate(searchParticlePrefab, transform.position, Quaternion.identity);
 

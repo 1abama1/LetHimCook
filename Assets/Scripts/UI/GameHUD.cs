@@ -13,9 +13,9 @@ public class GameHUD : MonoBehaviour
     public TextMeshProUGUI lootCountText;
 
     [Header("Suspicion")]
-    public Image  suspicionFill;
-    public Color  lowSuspicionColor  = Color.green;
-    public Color  highSuspicionColor = Color.red;
+    public Image suspicionFill;
+    public Color lowSuspicionColor  = Color.green;
+    public Color highSuspicionColor = Color.red;
 
     [Header("Phase Timer")]
     public TextMeshProUGUI phaseTimerText;
@@ -23,42 +23,46 @@ public class GameHUD : MonoBehaviour
     public Animator        phaseIconAnimator;
 
     [Header("Reputation")]
-    public Image[]            starImages;
-    public Sprite             fullStarSprite;
-    public Sprite             emptyStarSprite;
-    public GameObject         gameOverPanel;
+    public Image[]    starImages;
+    public Sprite     fullStarSprite;
+    public Sprite     emptyStarSprite;
+    public GameObject gameOverPanel;
 
     [Header("Stealth Kill")]
     public Image      stealthKillFill;
     public GameObject stealthKillUI;
 
     [Header("Flashlight Battery")]
-    public Image              batteryFill;
-    public TextMeshProUGUI    batteryText;
-    public Sprite             batteryGreenSprite;
-    public Sprite             batteryYellowSprite;
-    public Sprite             batteryRedSprite;
-    public GameObject         flashlightBatteryGroup;
+    public Image           batteryFill;
+    public TextMeshProUGUI batteryText;
+    public Sprite          batteryGreenSprite;
+    public Sprite          batteryYellowSprite;
+    public Sprite          batteryRedSprite;
+    public GameObject      flashlightBatteryGroup;
 
     [Header("Dialogue")]
-    public GameObject          dialoguePanel;
-    public TextMeshProUGUI     speakerNameText;
-    public TextMeshProUGUI     dialogueBodyText;
-    public Image               portraitImage;
-    public Transform           choiceButtonContainer;
-    public Button              choiceButtonPrefab;
+    public GameObject      dialoguePanel;
+    public TextMeshProUGUI speakerNameText;
+    public TextMeshProUGUI dialogueBodyText;
+    public Image           portraitImage;
+    public Transform       choiceButtonContainer;
+    public Button          choiceButtonPrefab;
 
-    private MurderSystem          _murderSystem;
-    private FlashlightController  _flashlight;
-    private List<Button>          _choiceButtons = new List<Button>();
-    private int                   _lastSecond = -1;
-    private GamePhase             _lastPhase = (GamePhase)(-1);
+    private MurderSystem         _murderSystem;
+    private FlashlightController _flashlight;
+    private List<Button>         _choiceButtons = new List<Button>();
+    private int                  _advanceCooldownFrames;
+    private int                  _lastSecond = -1;
+    private GamePhase            _lastPhase = (GamePhase)(-1);
+    private float                _lastSuspicion = -1f;
+
+    private CopNPC[] _allCops;
+    private InspectorAI _inspector;
 
     void Start()
     {
         _murderSystem = FindFirstObjectByType<MurderSystem>();
 
-        // Фонарик
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null)
         {
@@ -73,13 +77,8 @@ public class GameHUD : MonoBehaviour
             PlayerEconomy.Instance.onResourceChanged.AddListener(UpdateResource);
         }
 
-        InspectorAI inspector = FindFirstObjectByType<InspectorAI>();
-        if (inspector != null)
-            inspector.onSuspicionChanged.AddListener(UpdateSuspicion);
-
-        CopNPC[] cops = FindObjectsByType<CopNPC>(FindObjectsSortMode.None);
-        foreach (var cop in cops)
-            cop.onSuspicionChanged.AddListener(UpdateSuspicion);
+        _inspector = FindFirstObjectByType<InspectorAI>();
+        _allCops = FindObjectsByType<CopNPC>(FindObjectsSortMode.None);
 
         if (RestaurantReputation.Instance != null)
         {
@@ -94,15 +93,14 @@ public class GameHUD : MonoBehaviour
             DialogueSystem.Instance.onDialogueEnd.AddListener(HideDialogue);
         }
 
-        // Подписываемся на смену фаз — батарейка видна только ночью
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.onNightBegin.AddListener(() => 
+            GameManager.Instance.onNightBegin.AddListener(() =>
             {
                 SetBatteryGroupVisible(true);
                 if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger("Night");
             });
-            GameManager.Instance.onDayBegin.AddListener(() => 
+            GameManager.Instance.onDayBegin.AddListener(() =>
             {
                 SetBatteryGroupVisible(false);
                 if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger("Day");
@@ -110,16 +108,16 @@ public class GameHUD : MonoBehaviour
         }
 
         UpdateMoney(PlayerEconomy.Instance?.Money ?? 0);
-        UpdateSuspicion(0f);
+        UpdateSuspicion();
         UpdateReputation(RestaurantReputation.Instance?.reputation ?? 50f);
         UpdateBattery(1f);
-        if (gameOverPanel != null) gameOverPanel.SetActive(false);
 
-        // Применяем кастомный шрифт ко всем элементам HUD
-        ApplyGlobalFonts();
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
 
         bool isNight = GameManager.Instance?.currentPhase == GamePhase.Night;
         SetBatteryGroupVisible(isNight);
+
+        ApplyGlobalFonts();
         HideDialogue();
     }
 
@@ -127,8 +125,7 @@ public class GameHUD : MonoBehaviour
     {
         if (GameManager.Instance != null)
         {
-            float t = GameManager.Instance.phaseTimer;
-            int currentSecond = Mathf.FloorToInt(t);
+            int currentSecond = Mathf.FloorToInt(GameManager.Instance.phaseTimer);
             if (currentSecond != _lastSecond)
             {
                 _lastSecond = currentSecond;
@@ -140,9 +137,13 @@ public class GameHUD : MonoBehaviour
             {
                 _lastPhase = GameManager.Instance.currentPhase;
                 if (phaseLabel != null)
-                    phaseLabel.text = _lastPhase == GamePhase.Night ? "НОЧЬ" : "ДЕНЬ";
+                    phaseLabel.text = _lastPhase == GamePhase.Night ? "NIGHT" : "DAY";
             }
         }
+
+        // Поиск максимального Suspicion среди копов и инспектора
+        // Обновление Suspicion теперь происходит внутри UpdateSuspicion() без аргументов
+        UpdateSuspicion();
 
         if (_murderSystem != null && stealthKillUI != null)
         {
@@ -151,14 +152,29 @@ public class GameHUD : MonoBehaviour
             if (stealthKillFill != null) stealthKillFill.fillAmount = prog;
         }
 
-        // Advance dialogue on left click or Space (only when no choices are shown)
         if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsActive)
         {
-            bool clicked = Mouse.current?.leftButton.wasPressedThisFrame    ?? false;
-            bool spaced  = Keyboard.current?.spaceKey.wasPressedThisFrame   ?? false;
-            if (_choiceButtons.Count == 0 && (clicked || spaced))
+            if (_advanceCooldownFrames > 0)
             {
-                DialogueSystem.Instance.AdvanceLine();
+                _advanceCooldownFrames--;
+            }
+            else if (_choiceButtons.Count == 0)
+            {
+                bool clicked = Mouse.current?.leftButton.wasPressedThisFrame ?? false;
+                bool spaced  = Keyboard.current?.spaceKey.wasPressedThisFrame ?? false;
+                if (clicked || spaced)
+                    DialogueSystem.Instance.AdvanceLine();
+            }
+            else
+            {
+                // Горячие клавиши 1, 2, 3... для выбора ответа, если UI кнопки не нажимаются
+                if (Keyboard.current != null)
+                {
+                    if (Keyboard.current.digit1Key.wasPressedThisFrame && _choiceButtons.Count > 0) DialogueSystem.Instance.SelectChoice(0);
+                    if (Keyboard.current.digit2Key.wasPressedThisFrame && _choiceButtons.Count > 1) DialogueSystem.Instance.SelectChoice(1);
+                    if (Keyboard.current.digit3Key.wasPressedThisFrame && _choiceButtons.Count > 2) DialogueSystem.Instance.SelectChoice(2);
+                    if (Keyboard.current.digit4Key.wasPressedThisFrame && _choiceButtons.Count > 3) DialogueSystem.Instance.SelectChoice(3);
+                }
             }
         }
     }
@@ -181,12 +197,18 @@ public class GameHUD : MonoBehaviour
         }
     }
 
-    void UpdateSuspicion(float value)
+    void UpdateSuspicion()
     {
-        if (suspicionFill != null)
+        float max = 0f;
+
+        var inspector = FindFirstObjectByType<InspectorAI>();
+        if (inspector != null && inspector.suspicion > max)
+            max = inspector.suspicion;
+
+        if (Mathf.Abs(max - _lastSuspicion) > 0.5f)
         {
-            suspicionFill.fillAmount = value / 100f;
-            suspicionFill.color = Color.Lerp(lowSuspicionColor, highSuspicionColor, value / 100f);
+            _lastSuspicion = max;
+            if (suspicionFill != null) suspicionFill.fillAmount = max / 100f;
         }
     }
 
@@ -195,7 +217,7 @@ public class GameHUD : MonoBehaviour
         if (batteryFill != null)
         {
             batteryFill.fillAmount = percent;
-            
+
             if (batteryGreenSprite != null && batteryYellowSprite != null && batteryRedSprite != null)
             {
                 if (percent > 0.6f)
@@ -204,10 +226,11 @@ public class GameHUD : MonoBehaviour
                     batteryFill.sprite = batteryYellowSprite;
                 else
                     batteryFill.sprite = batteryRedSprite;
-                
+
                 batteryFill.color = Color.white;
             }
         }
+
         if (batteryText != null)
             batteryText.text = $"{Mathf.RoundToInt(percent * 100f)}%";
     }
@@ -220,9 +243,9 @@ public class GameHUD : MonoBehaviour
     void UpdateReputation(float value)
     {
         if (starImages == null || starImages.Length == 0) return;
-        int maxStars = starImages.Length;
+        int maxStars    = starImages.Length;
         int activeStars = Mathf.RoundToInt((value / 100f) * maxStars);
-        
+
         for (int i = 0; i < maxStars; i++)
         {
             if (starImages[i] != null)
@@ -243,38 +266,23 @@ public class GameHUD : MonoBehaviour
 
         if (portraitImage != null)
         {
-            if (portrait != null)
-            {
-                portraitImage.sprite = portrait;
-                portraitImage.gameObject.SetActive(true);
-            }
-            else
-            {
-                portraitImage.gameObject.SetActive(false);
-            }
+            portraitImage.sprite = portrait;
+            portraitImage.gameObject.SetActive(portrait != null);
         }
 
         ClearChoiceButtons();
+        _advanceCooldownFrames = 2;
     }
 
     void ShowChoices(List<DialogueChoice> choices)
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(true);
         ClearChoiceButtons();
-        if (choiceButtonPrefab == null || choiceButtonContainer == null) return;
 
-        // Если у диалога НЕТ выборов (просто монолог), создаем кнопку "Продолжить/Закончить"
-        if (choices == null || choices.Count == 0)
-        {
-            Button btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
-            btn.gameObject.SetActive(true);
-            TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.text = "Далее...";
-            
-            btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(0)); // Это автоматически закроет диалог
-            _choiceButtons.Add(btn);
-            return;
-        }
+        if (choiceButtonPrefab == null || choiceButtonContainer == null) return;
+        if (choices == null || choices.Count == 0) return;
+
+        _advanceCooldownFrames = 3;
 
         for (int i = 0; i < choices.Count; i++)
         {
@@ -282,23 +290,25 @@ public class GameHUD : MonoBehaviour
             Button btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
             btn.gameObject.SetActive(true);
 
-            RectTransform rt = btn.GetComponent<RectTransform>();
-            rt.anchorMin        = new Vector2(0f, 0.5f);
-            rt.anchorMax        = new Vector2(1f, 0.5f);
-            rt.offsetMin        = new Vector2(0f, rt.offsetMin.y);
-            rt.offsetMax        = new Vector2(0f, rt.offsetMax.y);
-            rt.sizeDelta        = new Vector2(0f, rt.sizeDelta.y > 0 ? rt.sizeDelta.y : 40f);
-
             TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null)
             {
-                label.text         = choices[i].buttonLabel;
-                label.textWrappingMode = TextWrappingModes.NoWrap;
-                label.overflowMode = TextOverflowModes.Ellipsis;
+                StoryManager.ApplyFont(label);
+                label.text             = choices[i].buttonLabel;
+                label.textWrappingMode = TextWrappingModes.Normal;
+                label.overflowMode     = TextOverflowModes.Overflow;
+                label.color            = new Color(0.1f, 0.1f, 0.1f, 1f);
+                label.fontSize         = 18f;
             }
 
             btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(idx));
             _choiceButtons.Add(btn);
+        }
+
+        if (_choiceButtons.Count > 0 && UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(_choiceButtons[0].gameObject);
         }
     }
 
@@ -306,18 +316,35 @@ public class GameHUD : MonoBehaviour
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         ClearChoiceButtons();
+        _advanceCooldownFrames = 0;
     }
 
     void ClearChoiceButtons()
     {
         foreach (var btn in _choiceButtons)
-            if (btn != null) Destroy(btn.gameObject);
+        {
+            if (btn != null) 
+            {
+                btn.transform.SetParent(null);
+                Destroy(btn.gameObject);
+            }
+        }
         _choiceButtons.Clear();
+
+        if (choiceButtonContainer != null)
+        {
+            for (int i = choiceButtonContainer.childCount - 1; i >= 0; i--)
+            {
+                Transform child = choiceButtonContainer.GetChild(i);
+                child.SetParent(null);
+                Destroy(child.gameObject);
+            }
+        }
     }
 
     public void OnBribeButtonPressed() => FindFirstObjectByType<InspectorAI>()?.TryBribe();
 
-    private void ApplyGlobalFonts()
+    void ApplyGlobalFonts()
     {
         StoryManager.ApplyFont(moneyText);
         StoryManager.ApplyFont(freshCountText);

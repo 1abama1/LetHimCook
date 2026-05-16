@@ -69,15 +69,15 @@ public class NotificationManager : MonoBehaviour
         switch (type)
         {
             case ResourceType.FreshIngredient:
-                resourceName = "Свежее мясо";
+                resourceName = "Fresh Meat";
                 textColor = new Color(0.3f, 0.75f, 1f); // Голубой
                 break;
             case ResourceType.SpoiledIngredient:
-                resourceName = "Гниль";
+                resourceName = "Spoiled Meat";
                 textColor = new Color(0.7f, 0.5f, 0.3f); // Коричневый
                 break;
             case ResourceType.JunkLoot:
-                resourceName = "Ценный лут";
+                resourceName = "Valuable Junk";
                 textColor = new Color(0.95f, 0.8f, 0.2f); // Золотой
                 break;
         }
