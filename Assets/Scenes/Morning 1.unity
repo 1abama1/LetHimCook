@@ -548,6 +548,7 @@ MonoBehaviour:
   minSpoiled: 1
   maxSpoiled: 4
   junkLootChance: 50
+  lootPortrait: {fileID: 0}
   alreadySearched: 0
   spoiledIngredientPool:
   - {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
@@ -2960,6 +2961,7 @@ MonoBehaviour:
   minSpoiled: 1
   maxSpoiled: 4
   junkLootChance: 50
+  lootPortrait: {fileID: 0}
   alreadySearched: 0
   spoiledIngredientPool:
   - {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
@@ -5131,6 +5133,7 @@ MonoBehaviour:
   minSpoiled: 1
   maxSpoiled: 4
   junkLootChance: 50
+  lootPortrait: {fileID: 0}
   alreadySearched: 0
   spoiledIngredientPool:
   - {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
@@ -5562,6 +5565,7 @@ MonoBehaviour:
   minSpoiled: 1
   maxSpoiled: 4
   junkLootChance: 50
+  lootPortrait: {fileID: 0}
   alreadySearched: 0
   spoiledIngredientPool:
   - {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
@@ -9373,6 +9377,7 @@ MonoBehaviour:
   minSpoiled: 1
   maxSpoiled: 4
   junkLootChance: 50
+  lootPortrait: {fileID: 0}
   alreadySearched: 0
   spoiledIngredientPool:
   - {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
@@ -11643,6 +11648,7 @@ MonoBehaviour:
   minSpoiled: 1
   maxSpoiled: 4
   junkLootChance: 50
+  lootPortrait: {fileID: 0}
   alreadySearched: 0
   spoiledIngredientPool:
   - {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
@@ -13989,6 +13995,7 @@ MonoBehaviour:
   bonusKillLoot: []
   junkLootAmount: 1
   moneyLoot: 0
+  lootPortrait: {fileID: 0}
   negotiateDialogueId: homeless_negotiate
   aggressiveDialogueId: homeless_hostile
   stealDetectionChance: 0.4

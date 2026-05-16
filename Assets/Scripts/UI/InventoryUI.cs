@@ -32,6 +32,8 @@ public class InventoryUI : MonoBehaviour
 
     private void Update()
     {
+        // Legacy Tab handling disabled in favor of NotebookUI
+        /*
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             if (inventoryPanel != null)
@@ -43,6 +45,7 @@ public class InventoryUI : MonoBehaviour
                 }
             }
         }
+        */
     }
 
     private void UpdateUI()

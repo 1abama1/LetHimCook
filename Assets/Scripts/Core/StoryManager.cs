@@ -46,6 +46,7 @@ public class StoryManager : MonoBehaviour
     public bool IsShowingSummary => _waitingForSummaryConfirm;
     public bool IsGameEnded      => _gameEnded;
     public int  CurrentDay       => _currentDay;
+    public int  DebtPaid         => _debtPaid;
 
     void Awake()
     {
@@ -58,6 +59,13 @@ public class StoryManager : MonoBehaviour
 
     void Start()
     {
+        // Автоматическое создание RecipeBookUI, если его нет
+        if (RecipeBookUI.Instance == null)
+        {
+            GameObject recipeGo = new GameObject("RecipeBookSystem");
+            recipeGo.AddComponent<RecipeBookUI>();
+        }
+
         // Подписка на фазы GameManager
         if (GameManager.Instance != null)
         {
