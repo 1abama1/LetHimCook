@@ -39,6 +39,13 @@ public class MurderSystem : MonoBehaviour
         if (_cooldownTimer > 0) _cooldownTimer -= Time.deltaTime;
 
         if (_attackAction == null) return;
+        
+        // Блокируем убийства во время диалога
+        if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsActive)
+        {
+            _stealthHoldTimer = 0f;
+            return;
+        }
 
         if (!_player.IsSneaking && _attackAction.WasPressedThisFrame())
         {
@@ -80,6 +87,9 @@ public class MurderSystem : MonoBehaviour
 
     void TryStealthKill()
     {
+        if (_cooldownTimer > 0) return;
+        _cooldownTimer = attackCooldown;
+
         Vector3 hitPoint = transform.position + transform.forward * (stealthKillRange * 0.5f);
         Collider[] hits = Physics.OverlapSphere(hitPoint, stealthKillRange, hitLayer);
         foreach (var hit in hits)

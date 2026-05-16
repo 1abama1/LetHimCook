@@ -73,8 +73,10 @@ public class PlayerController : MonoBehaviour
         _moveInput   = new Vector3(raw.x, 0f, raw.y);
         
         // Объединенная логика кнопок
-        _isSprinting = (_sprintAction != null && _sprintAction.IsPressed()) || (Keyboard.current?.leftShiftKey.isPressed ?? false);
-        _isSneaking  = (_sneakAction != null && _sneakAction.IsPressed())  || (Keyboard.current?.leftCtrlKey.isPressed ?? false);
+        _isSprinting = _sprintAction?.IsPressed() ?? false;
+        
+        if (_sneakAction != null && _sneakAction.WasPressedThisFrame())
+            _isSneaking = !_isSneaking;
 
         bool interactPressed = (_interactAction != null && _interactAction.WasPressedThisFrame()) || (Keyboard.current?.eKey.wasPressedThisFrame ?? false);
         bool hidePressed     = (_hideAction != null && _hideAction.WasPressedThisFrame())     || (Keyboard.current?.fKey.wasPressedThisFrame ?? false);
