@@ -25,6 +25,7 @@ public class CopNPC : MonoBehaviour
 
     public UnityEvent onCopSpotPlayer;
     public UnityEvent onArrestPlayer;
+    public UnityEvent<float> onSuspicionChanged;
 
     private CopState  _state = CopState.Patrol;
     private int       _currentPoint;
@@ -88,6 +89,8 @@ public class CopNPC : MonoBehaviour
                 _animator.SetTrigger("CopCheck");
 
             _suspicionTimer += Time.deltaTime;
+            onSuspicionChanged?.Invoke(SuspicionPercent * 100f);
+
             if (_suspicionTimer >= suspicionBuildTime)
             {
                 onCopSpotPlayer?.Invoke();
@@ -97,6 +100,9 @@ public class CopNPC : MonoBehaviour
         else
         {
             _suspicionTimer -= Time.deltaTime * 2f;
+            _suspicionTimer = Mathf.Max(0f, _suspicionTimer);
+            onSuspicionChanged?.Invoke(SuspicionPercent * 100f);
+
             if (_suspicionTimer <= 0f) TransitionTo(CopState.Patrol);
         }
     }

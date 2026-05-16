@@ -13,7 +13,6 @@ public class GameHUD : MonoBehaviour
     public TextMeshProUGUI lootCountText;
 
     [Header("Suspicion")]
-    public Slider suspicionSlider;
     public Image  suspicionFill;
     public Color  lowSuspicionColor  = Color.green;
     public Color  highSuspicionColor = Color.red;
@@ -21,25 +20,25 @@ public class GameHUD : MonoBehaviour
     [Header("Phase Timer")]
     public TextMeshProUGUI phaseTimerText;
     public TextMeshProUGUI phaseLabel;
+    public Animator        phaseIconAnimator;
 
     [Header("Reputation")]
-    public Slider             reputationSlider;
-    public Image              reputationFill;
-    public Color              goodReputationColor = new Color(0.2f, 0.8f, 0.4f);
-    public Color              badReputationColor  = new Color(0.9f, 0.2f, 0.2f);
+    public Image[]            starImages;
+    public Sprite             fullStarSprite;
+    public Sprite             emptyStarSprite;
     public GameObject         gameOverPanel;
 
     [Header("Stealth Kill")]
-    public Slider     stealthKillSlider;
+    public Image      stealthKillFill;
     public GameObject stealthKillUI;
 
     [Header("Flashlight Battery")]
-    public Slider             batterySlider;
     public Image              batteryFill;
     public TextMeshProUGUI    batteryText;
-    public Color              batteryFullColor = new Color(0.3f, 0.9f, 0.4f);
-    public Color              batteryLowColor  = new Color(0.9f, 0.2f, 0.1f);
-    public GameObject         flashlightBatteryGroup; // вся группа: скрывается днём
+    public Sprite             batteryGreenSprite;
+    public Sprite             batteryYellowSprite;
+    public Sprite             batteryRedSprite;
+    public GameObject         flashlightBatteryGroup;
 
     [Header("Dialogue")]
     public GameObject          dialoguePanel;
@@ -76,6 +75,10 @@ public class GameHUD : MonoBehaviour
         if (inspector != null)
             inspector.onSuspicionChanged.AddListener(UpdateSuspicion);
 
+        CopNPC[] cops = FindObjectsByType<CopNPC>(FindObjectsSortMode.None);
+        foreach (var cop in cops)
+            cop.onSuspicionChanged.AddListener(UpdateSuspicion);
+
         if (RestaurantReputation.Instance != null)
         {
             RestaurantReputation.Instance.onReputationChanged.AddListener(UpdateReputation);
@@ -92,8 +95,16 @@ public class GameHUD : MonoBehaviour
         // Подписываемся на смену фаз — батарейка видна только ночью
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.onNightBegin.AddListener(() => SetBatteryGroupVisible(true));
-            GameManager.Instance.onDayBegin.AddListener(()   => SetBatteryGroupVisible(false));
+            GameManager.Instance.onNightBegin.AddListener(() => 
+            {
+                SetBatteryGroupVisible(true);
+                if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger("Night");
+            });
+            GameManager.Instance.onDayBegin.AddListener(() => 
+            {
+                SetBatteryGroupVisible(false);
+                if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger("Day");
+            });
         }
 
         UpdateMoney(PlayerEconomy.Instance?.Money ?? 0);
@@ -121,7 +132,7 @@ public class GameHUD : MonoBehaviour
         {
             float prog = _murderSystem.StealthKillProgress;
             stealthKillUI.SetActive(prog > 0.01f);
-            if (stealthKillSlider != null) stealthKillSlider.value = prog;
+            if (stealthKillFill != null) stealthKillFill.fillAmount = prog;
         }
 
         // Advance dialogue on left click or Space (only when no choices are shown)
@@ -156,17 +167,32 @@ public class GameHUD : MonoBehaviour
 
     void UpdateSuspicion(float value)
     {
-        if (suspicionSlider != null) suspicionSlider.value = value / 100f;
-        if (suspicionFill   != null)
+        if (suspicionFill != null)
+        {
+            suspicionFill.fillAmount = value / 100f;
             suspicionFill.color = Color.Lerp(lowSuspicionColor, highSuspicionColor, value / 100f);
+        }
     }
 
     void UpdateBattery(float percent)
     {
-        if (batterySlider != null) batterySlider.value = percent;
-        if (batteryFill   != null)
-            batteryFill.color = Color.Lerp(batteryLowColor, batteryFullColor, percent);
-        if (batteryText   != null)
+        if (batteryFill != null)
+        {
+            batteryFill.fillAmount = percent;
+            
+            if (batteryGreenSprite != null && batteryYellowSprite != null && batteryRedSprite != null)
+            {
+                if (percent > 0.6f)
+                    batteryFill.sprite = batteryGreenSprite;
+                else if (percent > 0.25f)
+                    batteryFill.sprite = batteryYellowSprite;
+                else
+                    batteryFill.sprite = batteryRedSprite;
+                
+                batteryFill.color = Color.white;
+            }
+        }
+        if (batteryText != null)
             batteryText.text = $"{Mathf.RoundToInt(percent * 100f)}%";
     }
 
@@ -177,10 +203,15 @@ public class GameHUD : MonoBehaviour
 
     void UpdateReputation(float value)
     {
-        float t = value / 100f;
-        if (reputationSlider != null) reputationSlider.value = t;
-        if (reputationFill   != null)
-            reputationFill.color = Color.Lerp(badReputationColor, goodReputationColor, t);
+        if (starImages == null || starImages.Length == 0) return;
+        int maxStars = starImages.Length;
+        int activeStars = Mathf.RoundToInt((value / 100f) * maxStars);
+        
+        for (int i = 0; i < maxStars; i++)
+        {
+            if (starImages[i] != null)
+                starImages[i].sprite = (i < activeStars) ? fullStarSprite : emptyStarSprite;
+        }
     }
 
     void ShowGameOver()
@@ -215,6 +246,20 @@ public class GameHUD : MonoBehaviour
         if (dialoguePanel != null) dialoguePanel.SetActive(true);
         ClearChoiceButtons();
         if (choiceButtonPrefab == null || choiceButtonContainer == null) return;
+
+        // Если у диалога НЕТ выборов (просто монолог), создаем кнопку "Продолжить/Закончить"
+        if (choices == null || choices.Count == 0)
+        {
+            Button btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
+            btn.gameObject.SetActive(true);
+            TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null) label.text = "Далее...";
+            
+            btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(0)); // Это автоматически закроет диалог
+            _choiceButtons.Add(btn);
+            return;
+        }
+
         for (int i = 0; i < choices.Count; i++)
         {
             int idx = i;
