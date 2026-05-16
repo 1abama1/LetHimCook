@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Ing_Bun_Fresh
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
   ingredientName: Bun
-  sprite: {fileID: 0}
+  sprite: {fileID: 184335729, guid: d1315c2a125e9ed45af819ed1b4e758c, type: 3}
   rotLevel: 5
   cookedVersion: {fileID: 0}
   requiredProcess: 0
@@ -22,3 +22,4 @@ MonoBehaviour:
   rotParticlePrefab: {fileID: 0}
   modelPrefab: {fileID: 5717664143314005053, guid: 9fd0f3d89e2b6a54f8750a6f677f8148, type: 3}
   visualOffset: {x: 0, y: 0, z: -0.00927}
+  visualRotation: {x: 0, y: 0, z: 0}

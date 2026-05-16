@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffd66928313eaa14290b66bc7440d66e, type: 3}
   m_Name: Recipe_Salad
   m_EditorClassIdentifier: Assembly-CSharp::RecipeData
-  recipeName: Slad
-  icon: {fileID: 0}
+  recipeName: Salad
+  icon: {fileID: 2038662723, guid: 5959d68f778bf26408ca445708fcd7e9, type: 3}
   requiredIngredientNames:
   - Tomato
   - Cucumber

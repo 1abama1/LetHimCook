@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Ing_Cucumber_Poisonous
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
   ingredientName: Cucumber
-  sprite: {fileID: 0}
+  sprite: {fileID: 1908451323, guid: 23acb5e69fadc1d42903b0881498b56b, type: 3}
   rotLevel: 95
   cookedVersion: {fileID: 0}
   requiredProcess: 0

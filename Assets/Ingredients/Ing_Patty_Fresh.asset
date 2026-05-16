@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Ing_Patty_Fresh
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
   ingredientName: Patty
-  sprite: {fileID: 0}
+  sprite: {fileID: -1793555019, guid: f1064969f10238345b5fb187ddc6791e, type: 3}
   rotLevel: 10
   cookedVersion: {fileID: 0}
   requiredProcess: 2
@@ -21,3 +21,5 @@ MonoBehaviour:
   tintColor: {r: 0.5450981, g: 0.2705882, b: 0.07450981, a: 1}
   rotParticlePrefab: {fileID: 0}
   modelPrefab: {fileID: 8239615646218126857, guid: 7bc36d3c7a23a514884aa4c5ebff54d9, type: 3}
+  visualOffset: {x: 0, y: 0, z: 0}
+  visualRotation: {x: 0, y: 0, z: 0}

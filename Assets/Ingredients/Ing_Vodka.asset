@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Ing_Vodka
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
   ingredientName: Vodka
-  sprite: {fileID: 0}
+  sprite: {fileID: 1491337500, guid: 651e9a5c0345d534fa1fbeac892a1bd4, type: 3}
   rotLevel: 50
   cookedVersion: {fileID: 0}
   requiredProcess: 0

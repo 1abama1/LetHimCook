@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Ing_Patty_Rotten
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
   ingredientName: Patty
-  sprite: {fileID: 0}
+  sprite: {fileID: -1235713467, guid: 0febccae17a71124caa198de6be11076, type: 3}
   rotLevel: 70
   cookedVersion: {fileID: 0}
   requiredProcess: 2

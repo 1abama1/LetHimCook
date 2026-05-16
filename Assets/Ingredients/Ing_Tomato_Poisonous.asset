@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Ing_Tomato_Poisonous
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
   ingredientName: Tomato
-  sprite: {fileID: 0}
+  sprite: {fileID: 70588348, guid: be36533adfb4e6a4498e3edb892fbccf, type: 3}
   rotLevel: 95
   cookedVersion: {fileID: 0}
   requiredProcess: 0

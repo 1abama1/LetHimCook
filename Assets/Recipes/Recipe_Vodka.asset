@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Recipe_Vodka
   m_EditorClassIdentifier: Assembly-CSharp::RecipeData
   recipeName: Vodka
-  icon: {fileID: 0}
+  icon: {fileID: 1491337500, guid: 651e9a5c0345d534fa1fbeac892a1bd4, type: 3}
   requiredIngredientNames:
   - Vodka
   basePayment: 20

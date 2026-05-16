@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Ing_Tomato_Fresh
   m_EditorClassIdentifier: Assembly-CSharp::IngredientData
   ingredientName: Tomato
-  sprite: {fileID: 0}
+  sprite: {fileID: 70588348, guid: be36533adfb4e6a4498e3edb892fbccf, type: 3}
   rotLevel: 15
   cookedVersion: {fileID: 0}
   requiredProcess: 0
@@ -21,3 +21,5 @@ MonoBehaviour:
   tintColor: {r: 1, g: 0, b: 0.008803844, a: 1}
   rotParticlePrefab: {fileID: 0}
   modelPrefab: {fileID: 4286501082055212061, guid: aa63f65318419e44ea3aaaefb8568d18, type: 3}
+  visualOffset: {x: 0, y: 0, z: 0}
+  visualRotation: {x: 0, y: 0, z: 0}
