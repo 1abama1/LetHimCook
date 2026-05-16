@@ -1,5 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.UI;
 
 public enum GamePhase { Night, Day }
 
@@ -9,16 +11,29 @@ public class GameManager : MonoBehaviour
 
     [Header("Phase Settings")]
     public GamePhase currentPhase = GamePhase.Night;
-    public float dayDurationSeconds = 180f;
+    public float dayDurationSeconds  = 180f;
     public float nightDurationSeconds = 120f;
 
     [Header("Teleport Points")]
-    [Tooltip("Пустышка (GameObject), куда телепортирует днем")]
-    public Transform daySpawnPoint;
-    [Tooltip("Пустышка (GameObject), куда телепортирует ночью")]
-    public Transform nightSpawnPoint;
+    [Tooltip("Координаты точки спавна днём")]
+    public Vector3 daySpawnPosition;
+    [Tooltip("Поворот игрока днём (Euler)")]
+    public Vector3 daySpawnRotation;
 
-    private Transform _playerTransform;
+    [Tooltip("Координаты точки спавна ночью")]
+    public Vector3 nightSpawnPosition;
+    [Tooltip("Поворот игрока ночью (Euler)")]
+    public Vector3 nightSpawnRotation;
+
+    [Header("Player")]
+    [Tooltip("Перетащи сюда объект игрока из иерархии")]
+    public Transform playerTransform;
+
+    [Header("Transition")]
+    [Tooltip("Скорость затемнения/осветления экрана")]
+    public float fadeDuration = 0.6f;
+    [Tooltip("Пауза на чёрном экране между телепортом (сек)")]
+    public float holdBlackDuration = 0.3f;
 
     [Header("Events")]
     public UnityEvent onNightBegin;
@@ -28,7 +43,9 @@ public class GameManager : MonoBehaviour
 
     [HideInInspector] public float phaseTimer;
     private bool _phaseActive;
+    private bool _transitioning;
 
+    // ─────────────────────────────────────────────────────────────────────────
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -40,8 +57,7 @@ public class GameManager : MonoBehaviour
     {
         FindPlayer();
 
-        // Если в сцене есть StoryManager — он сам вызовет BeginPhase после предыстории.
-        // Но игрока телепортируем сразу, чтобы он стоял на NightSpawnPoint во время backstory.
+        // Если есть StoryManager — только телепортируем, он сам запустит BeginPhase
         if (StoryManager.Instance != null)
         {
             TeleportPlayer(currentPhase);
@@ -54,17 +70,19 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (!_phaseActive) return;
+        if (!_phaseActive || _transitioning) return;
         phaseTimer -= Time.deltaTime;
         if (phaseTimer <= 0f) TransitionPhase();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Запуск фазы (без анимации — внутренний)
+    // ─────────────────────────────────────────────────────────────────────────
     public void BeginPhase(GamePhase phase)
     {
-        currentPhase = phase;
-        _phaseActive = true;
+        currentPhase  = phase;
+        _phaseActive  = true;
 
-        // Телепортируем игрока в нужную точку
         TeleportPlayer(phase);
 
         if (phase == GamePhase.Night)
@@ -79,23 +97,64 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Переход с затемнением
+    // ─────────────────────────────────────────────────────────────────────────
     void TransitionPhase()
     {
-        _phaseActive = false;
-        BeginPhase(currentPhase == GamePhase.Night ? GamePhase.Day : GamePhase.Night);
+        if (_transitioning) return;
+        GamePhase next = (currentPhase == GamePhase.Night) ? GamePhase.Day : GamePhase.Night;
+        StartCoroutine(FadeTransition(next));
     }
 
+    IEnumerator FadeTransition(GamePhase next)
+    {
+        _transitioning = true;
+        _phaseActive   = false;
+
+        // ── Fade to black ──────────────────────────────────────────────────
+        if (ScreenFader.Instance != null)
+            yield return ScreenFader.Instance.FadeToBlack(fadeDuration);
+
+        // ── Телепорт пока экран чёрный ─────────────────────────────────────
+        currentPhase = next;
+        yield return StartCoroutine(TeleportPlayerCoroutine(next));
+
+        yield return new WaitForSeconds(holdBlackDuration);
+
+        // ── Запускаем новую фазу (события, таймер) ─────────────────────────
+        _phaseActive = true;
+        if (next == GamePhase.Night)
+        {
+            phaseTimer = nightDurationSeconds;
+            onNightBegin?.Invoke();
+        }
+        else
+        {
+            phaseTimer = dayDurationSeconds;
+            onDayBegin?.Invoke();
+        }
+
+        // ── Fade from black ────────────────────────────────────────────────
+        if (ScreenFader.Instance != null)
+            yield return ScreenFader.Instance.FadeFromBlack(fadeDuration);
+
+        _transitioning = false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Арест — мгновенный скип ночи (тоже с затемнением)
+    // ─────────────────────────────────────────────────────────────────────────
     public void TriggerArrest()
     {
         onArrest?.Invoke();
         PlayerEconomy.Instance?.LoseAllNightResources();
 
-        // Пропускаем остаток ночи при аресте
-        if (currentPhase == GamePhase.Night)
+        if (currentPhase == GamePhase.Night && !_transitioning)
         {
             Debug.Log("[GameManager] Игрок арестован! Скипаем ночь.");
             _phaseActive = false;
-            BeginPhase(GamePhase.Day);
+            StartCoroutine(FadeTransition(GamePhase.Day));
         }
     }
 
@@ -106,38 +165,80 @@ public class GameManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  Логика телепортации
+    //  Телепортация
     // ─────────────────────────────────────────────────────────────────────────
     private void FindPlayer()
     {
-        if (_playerTransform == null)
+        // Приоритет: прямая ссылка из инспектора
+        if (playerTransform != null)
         {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null) _playerTransform = player.transform;
+            return; // уже есть
         }
+        // Запасной вариант: поиск по тегу
+        GameObject go = GameObject.FindGameObjectWithTag("Player");
+        if (go != null) playerTransform = go.transform;
     }
 
+    /// <summary>
+    /// Корутина телепорта: ждёт кадр после отключения CharacterController,
+    /// иначе CC может проигнорировать изменение позиции в том же кадре.
+    /// </summary>
+    private IEnumerator TeleportPlayerCoroutine(GamePhase phase)
+    {
+        FindPlayer();
+        if (playerTransform == null)
+        {
+            Debug.LogWarning("[GameManager] Игрок не найден! Назначь playerTransform в инспекторе.");
+            yield break;
+        }
+
+        Vector3    targetPos = (phase == GamePhase.Day) ? daySpawnPosition  : nightSpawnPosition;
+        Quaternion targetRot = (phase == GamePhase.Day)
+            ? Quaternion.Euler(daySpawnRotation)
+            : Quaternion.Euler(nightSpawnRotation);
+
+        CharacterController cc = playerTransform.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
+        // Даём Unity время понять, что CC выключен
+        yield return new WaitForSecondsRealtime(0.1f);
+
+        playerTransform.position = targetPos;
+        playerTransform.rotation = targetRot;
+
+        Physics.SyncTransforms(); // Форсируем обновление физики
+        yield return null; // кадр 2: позиция зафиксирована
+
+        if (cc != null) cc.enabled = true;
+        Debug.Log($"[GameManager] Игрок телепортирован (Coroutine) в {targetPos}");
+    }
+
+    /// <summary>Синхронная версия для Start() (без анимации).</summary>
     private void TeleportPlayer(GamePhase phase)
     {
         FindPlayer();
-        if (_playerTransform == null) return;
-
-        Transform targetPoint = (phase == GamePhase.Day) ? daySpawnPoint : nightSpawnPoint;
-
-        if (targetPoint == null)
+        if (playerTransform == null)
         {
-            Debug.LogWarning("[GameManager] Точки спавна не назначены! Телепорт отменен.");
+            Debug.LogWarning("[GameManager] Игрок не найден! Назначь playerTransform в инспекторе.");
             return;
         }
 
-        // ВАЖНО: CharacterController блокирует прямое изменение position —
-        // выключаем его на один кадр, перемещаем, включаем обратно.
-        CharacterController cc = _playerTransform.GetComponent<CharacterController>();
+        Vector3    targetPos = (phase == GamePhase.Day) ? daySpawnPosition  : nightSpawnPosition;
+        Quaternion targetRot = (phase == GamePhase.Day)
+            ? Quaternion.Euler(daySpawnRotation)
+            : Quaternion.Euler(nightSpawnRotation);
+
+        CharacterController cc = playerTransform.GetComponent<CharacterController>();
         if (cc != null) cc.enabled = false;
-
-        _playerTransform.position = targetPoint.position;
-        _playerTransform.rotation = targetPoint.rotation;
-
+        
+        playerTransform.position = targetPos;
+        playerTransform.rotation = targetRot;
+        
+        Physics.SyncTransforms(); // Форсируем обновление физики
+        
         if (cc != null) cc.enabled = true;
+        Debug.Log($"[GameManager] Игрок телепортирован (Sync) в {targetPos}");
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
 }

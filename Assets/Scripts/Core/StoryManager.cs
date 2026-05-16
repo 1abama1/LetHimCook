@@ -27,6 +27,9 @@ public class StoryManager : MonoBehaviour
     [Tooltip("Сколько дней даётся на погашение долга")]
     public int totalDays = 3;
 
+    [Tooltip("Минимальная сумма, которую нужно заработать ЗА ДЕНЬ (или иметь к концу дня), чтобы не проиграть")]
+    public int dailyMoneyGoal = 200;
+
     // ─────────────────────────────────────────────────────────────────────────
     //  Backstory
     // ─────────────────────────────────────────────────────────────────────────
@@ -68,14 +71,8 @@ public class StoryManager : MonoBehaviour
     [Tooltip("Сколько секунд ждать до автоматического продолжения")]
     public float daySummaryAutoAdvance = 5f;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  End Screens
-    // ─────────────────────────────────────────────────────────────────────────
-    [Header("End Screens")]
-    public GameObject victoryPanel;
-    public GameObject gameOverPanel;
-    public TMP_Text   victoryText;
-    public TMP_Text   gameOverText;
+    [Header("End Screen Reference")]
+    public GameOverScreen gameOverScreen;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Events
@@ -93,6 +90,7 @@ public class StoryManager : MonoBehaviour
     private int _debtRemaining => totalDebt - _debtPaid;
     private bool _gameEnded   = false;
     private bool _waitingForSummaryConfirm = false;
+    private bool _isHandlingPhaseTransition = false;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Unity lifecycle
@@ -107,13 +105,23 @@ public class StoryManager : MonoBehaviour
     void Start()
     {
         BuildUIIfNeeded();
+        
+        if (gameOverScreen == null)
+            gameOverScreen = Object.FindFirstObjectByType<GameOverScreen>();
+
         HideAllPanels();
 
-        // Подписываемся на переход дня (GameManager.onDayBegin = конец ночи → начало дня)
+        // Подписываемся на переходы фаз
         if (GameManager.Instance != null)
         {
-            // Каждый раз как начинается ДЕНЬ — значит ночь закончилась → суммари
-            GameManager.Instance.onDayBegin.AddListener(OnNightEnded);
+            // Начало дня: увеличиваем счетчик дней
+            GameManager.Instance.onDayBegin.AddListener(() => {
+                if (!_gameEnded) _currentDay++;
+                Debug.Log($"[StoryManager] Начался День {_currentDay}");
+            });
+
+            // Начало ночи: день закончился -> проверяем цель и показываем суммари
+            GameManager.Instance.onNightBegin.AddListener(OnDayEnded);
         }
 
         // Стартуем с предыстории
@@ -170,30 +178,50 @@ public class StoryManager : MonoBehaviour
 
         // Запускаем игру с первой ночи
         Time.timeScale = 1f;
-        _currentDay = 1;
-        Debug.Log("[StoryManager] Предыстория завершена. День 1, начинается ночь.");
+        _currentDay = 0; // Начнем с 0, инкремент будет при первом onDayBegin
+        Debug.Log("[StoryManager] Предыстория завершена. Начинается первая ночь.");
 
         // Сообщаем подписчикам
         onStoryFinished?.Invoke();
 
         // Убеждаемся, что GameManager стартует с Night
         if (GameManager.Instance != null)
+        {
+            yield return null; // Ждём кадр для финализации всех систем
             GameManager.Instance.BeginPhase(GamePhase.Night);
+        }
 
         UpdateDebtHud();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  Called when a night ends (GameManager.onDayBegin fires)
+    //  Called when a day ends (GameManager.onNightBegin fires)
     // ─────────────────────────────────────────────────────────────────────────
-    void OnNightEnded()
+    void OnDayEnded()
     {
-        if (_gameEnded || _currentDay == 0) return;
+        if (_gameEnded || _currentDay == 0 || _isHandlingPhaseTransition) return;
 
-        // Считаем, сколько заработали за ночь
-        int earned = PlayerEconomy.Instance?.Money ?? 0;
-        // Логика: считаем что всё что сверх стартовых денег — это заработок ночи
-        // (более точно нужно snapshot в начале ночи — для простоты используем текущий баланс)
+        StartCoroutine(DayEndSequence());
+    }
+
+    private IEnumerator DayEndSequence()
+    {
+        _isHandlingPhaseTransition = true;
+
+        // Затемняем экран
+        if (ScreenFader.Instance != null)
+            yield return ScreenFader.Instance.FadeToBlack(1f);
+
+        // Проверяем цель на сегодня
+        int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
+        
+        if (currentMoney < dailyMoneyGoal)
+        {
+            // Не набрали нужную сумму за день -> Геймовер
+            TriggerGameOver($"Ты не смог заработать даже ${dailyMoneyGoal} за день.\nБратья Мамытовы не любят ждать.");
+            _isHandlingPhaseTransition = false;
+            yield break;
+        }
 
         ShowDaySummary();
     }
@@ -211,7 +239,7 @@ public class StoryManager : MonoBehaviour
         int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
 
         string summary =
-            $"═══ КОНЕЦ НОЧИ {_currentDay} ═══\n\n" +
+            $"═══ КОНЕЦ ДНЯ {_currentDay} ═══\n\n" +
             $"Баланс:         ${currentMoney}\n" +
             $"Долг погашен:   ${_debtPaid}\n" +
             $"Остаток долга:  ${_debtRemaining}\n\n";
@@ -224,7 +252,7 @@ public class StoryManager : MonoBehaviour
         }
         else
         {
-            summary += $"Осталось ночей: {totalDays - _currentDay}";
+            summary += $"Осталось дней: {totalDays - _currentDay}";
         }
 
         if (daySummaryText != null)
@@ -260,6 +288,13 @@ public class StoryManager : MonoBehaviour
 
         Time.timeScale = 1f;
 
+        // Если не финал, возвращаем свет
+        if (_currentDay < totalDays && !_gameEnded)
+        {
+            if (ScreenFader.Instance != null)
+                StartCoroutine(ScreenFader.Instance.FadeFromBlack(1f));
+        }
+
         if (_currentDay >= totalDays)
         {
             // Финал
@@ -267,14 +302,13 @@ public class StoryManager : MonoBehaviour
         }
         else
         {
-            // Следующая ночь
-            _currentDay++;
-            Debug.Log($"[StoryManager] День {_currentDay} начинается. Осталось долга: ${_debtRemaining}");
-            UpdateDebtHud();
-
-            if (GameManager.Instance != null)
+            // Просто продолжаем к ночи (GameManager сам переключит фазу или мы форсируем)
+            // Но в нашей схеме GameManager переключает фазы сам, а мы просто ставим Time.timeScale = 1
+            if (GameManager.Instance != null && GameManager.Instance.currentPhase != GamePhase.Night)
                 GameManager.Instance.BeginPhase(GamePhase.Night);
         }
+
+        _isHandlingPhaseTransition = false;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -331,31 +365,37 @@ public class StoryManager : MonoBehaviour
     void TriggerVictory()
     {
         Debug.Log("[StoryManager] 🏆 Победа! Долг погашен.");
-        Time.timeScale = 0f;
-
-        if (victoryPanel != null) victoryPanel.SetActive(true);
-        if (victoryText  != null)
-            victoryText.text =
-                "СВОБОДЕН!\n\n" +
-                $"Ты выплатил весь долг — $2 400.\n" +
-                "Братья Мамытовы пожали тебе руку и исчезли в ночи.\n\n" +
-                "Ты выжил. Что будет дальше — твоё дело.";
+        
+        if (gameOverScreen != null)
+        {
+            gameOverScreen.ShowVictory();
+        }
+        else
+        {
+            Time.timeScale = 0f;
+            Debug.LogWarning("[StoryManager] GameOverScreen не назначен!");
+        }
 
         onGameWin?.Invoke();
     }
 
-    void TriggerGameOver()
+    void TriggerGameOver(string reason = "")
     {
-        Debug.Log($"[StoryManager] 💀 Game Over. Остаток долга: ${_debtRemaining}");
-        Time.timeScale = 0f;
+        Debug.Log($"[StoryManager] 💀 Game Over. {reason}");
 
-        if (gameOverPanel != null) gameOverPanel.SetActive(true);
-        if (gameOverText  != null)
-            gameOverText.text =
-                "ВРЕМЯ ВЫШЛО\n\n" +
-                $"Ты не смог собрать ${totalDebt}.\n" +
-                $"Остаток: ${_debtRemaining}\n\n" +
-                "На рассвете третьего дня за тобой пришли.";
+        if (gameOverScreen != null)
+        {
+            string finalReason = string.IsNullOrEmpty(reason) 
+                ? $"Ты не смог собрать ${totalDebt} вовремя." 
+                : reason;
+            
+            gameOverScreen.ShowGameOver(finalReason);
+        }
+        else
+        {
+            Time.timeScale = 0f;
+            Debug.LogWarning("[StoryManager] GameOverScreen не назначен!");
+        }
 
         onGameOver?.Invoke();
     }
@@ -403,7 +443,9 @@ public class StoryManager : MonoBehaviour
         RectTransform bgRect = bgGO.GetComponent<RectTransform>();
         bgRect.anchorMin = Vector2.zero;
         bgRect.anchorMax = Vector2.one;
-        bgRect.offsetMin = bgRect.offsetMax = Vector2.zero;
+        bgRect.offsetMin = Vector2.zero;
+        bgRect.offsetMax = Vector2.zero;
+        bgRect.localScale = Vector3.one;
 
         // Текст предыстории
         GameObject labelGO = new GameObject("StoryLabel");
@@ -426,8 +468,7 @@ public class StoryManager : MonoBehaviour
     void HideAllPanels()
     {
         if (daySummaryPanel != null) daySummaryPanel.SetActive(false);
-        if (victoryPanel    != null) victoryPanel.SetActive(false);
-        if (gameOverPanel   != null) gameOverPanel.SetActive(false);
+        // Панели GameOver/Victory теперь управляются через GameOverScreen
     }
 
     // ─────────────────────────────────────────────────────────────────────────
