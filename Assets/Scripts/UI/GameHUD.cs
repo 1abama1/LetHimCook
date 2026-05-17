@@ -59,6 +59,10 @@ public class GameHUD : MonoBehaviour
     private CopNPC[] _allCops;
     private InspectorAI _inspector;
 
+    private Coroutine _typewriterRoutine;
+    private bool _isTyping;
+    private string _currentFullText;
+
     void Start()
     {
         _murderSystem = FindFirstObjectByType<MurderSystem>();
@@ -163,7 +167,18 @@ public class GameHUD : MonoBehaviour
                 bool clicked = Mouse.current?.leftButton.wasPressedThisFrame ?? false;
                 bool spaced  = Keyboard.current?.spaceKey.wasPressedThisFrame ?? false;
                 if (clicked || spaced)
-                    DialogueSystem.Instance.AdvanceLine();
+                {
+                    if (_isTyping)
+                    {
+                        if (_typewriterRoutine != null) StopCoroutine(_typewriterRoutine);
+                        _isTyping = false;
+                        if (dialogueBodyText != null) dialogueBodyText.maxVisibleCharacters = _currentFullText.Length;
+                    }
+                    else
+                    {
+                        DialogueSystem.Instance.AdvanceLine();
+                    }
+                }
             }
             else
             {
@@ -258,20 +273,59 @@ public class GameHUD : MonoBehaviour
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
     }
 
-    void ShowDialogueLine(string speakerName, string text, Sprite portrait)
+    void ShowDialogueLine(DialogueLine line)
     {
         if (dialoguePanel    != null) dialoguePanel.SetActive(true);
-        if (speakerNameText  != null) speakerNameText.text  = speakerName;
-        if (dialogueBodyText != null) dialogueBodyText.text = text;
+        if (speakerNameText  != null) speakerNameText.text  = line.speakerName;
 
         if (portraitImage != null)
         {
-            portraitImage.sprite = portrait;
-            portraitImage.gameObject.SetActive(portrait != null);
+            portraitImage.sprite = line.portrait;
+            portraitImage.gameObject.SetActive(line.portrait != null);
         }
 
         ClearChoiceButtons();
         _advanceCooldownFrames = 2;
+
+        if (_typewriterRoutine != null) StopCoroutine(_typewriterRoutine);
+        _typewriterRoutine = StartCoroutine(TypewriterEffect(line));
+    }
+
+    System.Collections.IEnumerator TypewriterEffect(DialogueLine line)
+    {
+        _isTyping = true;
+        _currentFullText = line.text;
+        if (dialogueBodyText != null)
+        {
+            dialogueBodyText.text = _currentFullText;
+            dialogueBodyText.maxVisibleCharacters = 0;
+        }
+
+        float typingSpeed = 0.035f;
+        int charsToPlaySound = 2;
+
+        for (int i = 0; i <= _currentFullText.Length; i++)
+        {
+            if (dialogueBodyText != null)
+                dialogueBodyText.maxVisibleCharacters = i;
+
+            if (line.voiceClip != null && i % charsToPlaySound == 0 && i < _currentFullText.Length)
+            {
+                if (_currentFullText[i] != ' ' && _currentFullText[i] != '\n')
+                {
+                    GameObject go = new GameObject("VoiceBlip");
+                    AudioSource src = go.AddComponent<AudioSource>();
+                    src.clip = line.voiceClip;
+                    src.pitch = Random.Range(0.85f, 1.15f);
+                    src.volume = 0.6f;
+                    src.Play();
+                    Destroy(go, line.voiceClip.length + 0.1f);
+                }
+            }
+
+            yield return new WaitForSeconds(typingSpeed);
+        }
+        _isTyping = false;
     }
 
     void ShowChoices(List<DialogueChoice> choices)

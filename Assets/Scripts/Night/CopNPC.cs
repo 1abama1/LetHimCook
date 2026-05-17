@@ -97,6 +97,12 @@ public class CopNPC : MonoBehaviour
         _currentPoint = (_currentPoint + 1) % patrolPoints.Length;
         _isWaiting = false;
     }
+    public void ResetSuspicion()
+    {
+        _suspicionTimer = 0f;
+        onSuspicionChanged?.Invoke(0f);
+        if (_state == CopState.Chase) TransitionTo(CopState.Patrol);
+    }
 
     void UpdateSuspicious()
     {

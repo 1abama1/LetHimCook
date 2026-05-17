@@ -7,6 +7,7 @@ public class IngredientSelectUI : MonoBehaviour
     public static IngredientSelectUI Instance { get; private set; }
     public bool IsOpen { get; private set; }
 
+    private GameObject    _canvasGo;
     private GameObject    _panel;
     private Transform     _grid;
     private PlayerController _pendingPlayer;
@@ -17,7 +18,7 @@ public class IngredientSelectUI : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         BuildUI();
-        _panel.SetActive(false);
+        if (_canvasGo != null) _canvasGo.SetActive(false);
     }
 
     void Update()
@@ -34,13 +35,13 @@ public class IngredientSelectUI : MonoBehaviour
         }
         _pendingPlayer = player;
         RefreshGrid();
-        _panel.SetActive(true);
+        if (_canvasGo != null) _canvasGo.SetActive(true);
         IsOpen = true;
     }
 
     public void Close()
     {
-        if (_panel != null) _panel.SetActive(false);
+        if (_canvasGo != null) _canvasGo.SetActive(false);
         IsOpen = false;
         _pendingPlayer = null;
     }
@@ -183,19 +184,19 @@ public class IngredientSelectUI : MonoBehaviour
 
     private void BuildUI()
     {
-        var cvGo = new GameObject("IngSelectCanvas", typeof(RectTransform));
-        cvGo.transform.SetParent(transform);
-        var cv = cvGo.AddComponent<Canvas>();
+        _canvasGo = new GameObject("IngSelectCanvas", typeof(RectTransform));
+        _canvasGo.transform.SetParent(transform);
+        var cv = _canvasGo.AddComponent<Canvas>();
         cv.renderMode    = RenderMode.ScreenSpaceOverlay;
         cv.sortingOrder  = 200;
-        var cvs = cvGo.AddComponent<CanvasScaler>();
+        var cvs = _canvasGo.AddComponent<CanvasScaler>();
         cvs.uiScaleMode            = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         cvs.referenceResolution    = new Vector2(1920, 1080);
         cvs.matchWidthOrHeight     = 0.5f;
-        cvGo.AddComponent<GraphicRaycaster>();
+        _canvasGo.AddComponent<GraphicRaycaster>();
 
         var overlayGo  = new GameObject("Overlay", typeof(RectTransform));
-        overlayGo.transform.SetParent(cvGo.transform, false);
+        overlayGo.transform.SetParent(_canvasGo.transform, false);
         var overlayImg = overlayGo.AddComponent<Image>();
         overlayImg.color = new Color(0f, 0f, 0f, 0.6f);
         Stretch(overlayImg.rectTransform);
@@ -204,7 +205,7 @@ public class IngredientSelectUI : MonoBehaviour
         overlayBtn.onClick.AddListener(Close);
 
         _panel = new GameObject("Panel", typeof(RectTransform));
-        _panel.transform.SetParent(cvGo.transform, false);
+        _panel.transform.SetParent(_canvasGo.transform, false);
         var panelImg  = _panel.AddComponent<Image>();
         panelImg.color = new Color(0.10f, 0.10f, 0.14f, 0.97f);
         var panelRect  = panelImg.rectTransform;

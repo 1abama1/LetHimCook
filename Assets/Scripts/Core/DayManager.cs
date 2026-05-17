@@ -22,6 +22,10 @@ public class DayManager : MonoBehaviour
     [Tooltip("Автоматически продавать JunkLoot в конце дня")]
     public bool autoSellJunk = true;
 
+    [Header("Tutorial")]
+    public GameObject tutorialPointerPrefab;
+    private System.Collections.Generic.List<TutorialPointer> _activePointers = new System.Collections.Generic.List<TutorialPointer>();
+
     [Header("Events")]
     public UnityEvent onDayStart;
     public UnityEvent onDayEnd;
@@ -58,6 +62,15 @@ public class DayManager : MonoBehaviour
             Debug.Log("[DayManager] New day started — recipe assigned.");
         }
 
+        if (StoryManager.Instance != null && StoryManager.Instance.CurrentDay == 1 && tutorialPointerPrefab != null)
+        {
+            var stations = FindObjectsByType<CookingStation>(FindObjectsSortMode.None);
+            foreach (var st in stations) _activePointers.Add(TutorialPointer.Create(st.transform, tutorialPointerPrefab));
+
+            var deliveries = FindObjectsByType<DeliveryCounter>(FindObjectsSortMode.None);
+            foreach (var del in deliveries) _activePointers.Add(TutorialPointer.Create(del.transform, tutorialPointerPrefab));
+        }
+
         onDayStart?.Invoke();
     }
 
@@ -73,6 +86,9 @@ public class DayManager : MonoBehaviour
                 Debug.Log($"[DayManager] Night started — sold {junk} junk loot.");
             }
         }
+
+        foreach (var p in _activePointers) if (p != null) Destroy(p.gameObject);
+        _activePointers.Clear();
 
         onDayEnd?.Invoke();
     }

@@ -158,11 +158,13 @@ public class GameManager : MonoBehaviour
         if (next == GamePhase.Night)
         {
             phaseTimer = nightDurationSeconds;
+            ResetAllSuspicion();
             onNightBegin?.Invoke();
         }
         else
         {
             phaseTimer = dayDurationSeconds;
+            ResetAllSuspicion();
             onDayBegin?.Invoke();
         }
 
@@ -193,6 +195,15 @@ public class GameManager : MonoBehaviour
     {
         onInspectorFine?.Invoke();
         PlayerEconomy.Instance?.SpendMoney(amount);
+    }
+
+    private void ResetAllSuspicion()
+    {
+        var cops = FindObjectsByType<CopNPC>(FindObjectsSortMode.None);
+        foreach (var c in cops) if (c != null) c.ResetSuspicion();
+
+        var inspectors = FindObjectsByType<InspectorAI>(FindObjectsSortMode.None);
+        foreach (var i in inspectors) if (i != null) i.ResetSuspicion();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
