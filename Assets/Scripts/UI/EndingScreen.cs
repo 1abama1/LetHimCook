@@ -84,7 +84,11 @@ public class EndingScreen : MonoBehaviour
     public void ShowDefeat(string reason)
     {
         _titleLabel.text   = defeatTitle;
-        _messageLabel.text = reason;
+        if (!string.IsNullOrEmpty(reason))
+            _messageLabel.text = defeatMessage + "\n\n" + reason;
+        else
+            _messageLabel.text = defeatMessage;
+
         _titleLabel.color  = defeatColor;
         StartCoroutine(ShowRoutine());
     }
@@ -153,7 +157,6 @@ public class EndingScreen : MonoBehaviour
         // Canvas
         var canvasGO = new GameObject("[EndingScreen]");
         canvasGO.transform.SetParent(transform, false);
-        DontDestroyOnLoad(canvasGO);
 
         _canvas = canvasGO.AddComponent<Canvas>();
         _canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
@@ -168,6 +171,17 @@ public class EndingScreen : MonoBehaviour
         _group               = canvasGO.AddComponent<CanvasGroup>();
         _group.alpha         = 0f;
         _group.blocksRaycasts = true;
+
+        // Чёрный фон поверх игры
+        var bgGO = new GameObject("BlackBackground", typeof(RectTransform));
+        bgGO.transform.SetParent(canvasGO.transform, false);
+        var bgRt = bgGO.GetComponent<RectTransform>();
+        bgRt.anchorMin = Vector2.zero;
+        bgRt.anchorMax = Vector2.one;
+        bgRt.offsetMin = Vector2.zero;
+        bgRt.offsetMax = Vector2.zero;
+        var bgImg = bgGO.AddComponent<Image>();
+        bgImg.color = new Color(0f, 0f, 0f, 1f); // Полностью чёрный фон
 
         // Центральная колонка
         var column = MakeRect(canvasGO.transform, "Column");
@@ -211,9 +225,9 @@ public class EndingScreen : MonoBehaviour
         hlg.childForceExpandHeight = false;
         hlg.childForceExpandWidth  = false;
 
-        MakeButton(btnRow, "Повторить",   OnRestart,  new Color(0.9f, 0.75f, 0.2f), new Color(0.06f, 0.06f, 0.06f));
-        MakeButton(btnRow, "Главное меню",OnMainMenu, new Color(0.2f, 0.2f, 0.25f), new Color(0.85f, 0.85f, 0.85f));
-        MakeButton(btnRow, "Выйти",       OnQuit,     new Color(0.15f, 0.15f, 0.18f), new Color(0.6f, 0.6f, 0.6f));
+        MakeButton(btnRow, "RESTART",   OnRestart,  new Color(0.9f, 0.75f, 0.2f), new Color(0.06f, 0.06f, 0.06f));
+        MakeButton(btnRow, "MAIN MENU",OnMainMenu, new Color(0.2f, 0.2f, 0.25f), new Color(0.85f, 0.85f, 0.85f));
+        MakeButton(btnRow, "QUIT",       OnQuit,     new Color(0.15f, 0.15f, 0.18f), new Color(0.6f, 0.6f, 0.6f));
     }
 
     private void RefreshFonts()

@@ -72,14 +72,14 @@ public class GameManager : MonoBehaviour
     {
         if (!_phaseActive || _transitioning) return;
         
-        // 1. Не тикаем, если игра закончена
+        // 1. Не тикаем таймером фазы, если игра завершена
         if (StoryManager.Instance != null && StoryManager.Instance.IsGameEnded)
         {
             _phaseActive = false;
             return;
         }
 
-        // 2. Не тикаем, если StoryManager сейчас показывает итоги дня (пауза)
+        // 2. БЛОКИРОВКА: Не уменьшаем таймер фазы, пока открыты итоги дня
         if (StoryManager.Instance != null && StoryManager.Instance.IsShowingSummary)
         {
             return; 
@@ -166,6 +166,19 @@ public class GameManager : MonoBehaviour
             phaseTimer = dayDurationSeconds;
             ResetAllSuspicion();
             onDayBegin?.Invoke();
+        }
+
+        // Ждем, пока StoryManager показывает итоги дня
+        while (StoryManager.Instance != null && StoryManager.Instance.IsShowingSummary)
+        {
+            yield return null;
+        }
+
+        // Если игра завершена в onNightBegin, прекращаем переход, оставляем чёрный экран
+        if (StoryManager.Instance != null && StoryManager.Instance.IsGameEnded)
+        {
+            _transitioning = false;
+            yield break;
         }
 
         // ── Fade from black ────────────────────────────────────────────────

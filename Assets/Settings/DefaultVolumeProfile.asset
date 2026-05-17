@@ -147,6 +147,9 @@ MonoBehaviour:
   noiseStrength:
     m_OverrideState: 1
     m_Value: 0.05
+  isEnabled:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &-7274224791359825572
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -843,6 +846,9 @@ MonoBehaviour:
   colorPrecision:
     m_OverrideState: 1
     m_Value: 32
+  isEnabled:
+    m_OverrideState: 1
+    m_Value: 1
 --- !u!114 &2383436105576463051
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -868,6 +874,9 @@ MonoBehaviour:
   ditherScale:
     m_OverrideState: 1
     m_Value: 2
+  isEnabled:
+    m_OverrideState: 1
+    m_Value: 1
 --- !u!114 &3959858460715838825
 MonoBehaviour:
   m_ObjectHideFlags: 3

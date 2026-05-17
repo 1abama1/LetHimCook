@@ -19,9 +19,9 @@ public class StoryManager : MonoBehaviour
 
     [Header("Backstory Text")]
     [TextArea(4, 12)]
-    public string backstoryText = "Ты задолжал братьям Мамытовым. У тебя есть 3 дня, чтобы собрать $1500, иначе последствия будут фатальными.";
+    public string backstoryText = "You owe the Mamytov brothers. You have 3 days to collect $1000, otherwise the consequences will be fatal.";
 
-    [Header("Backstory Text")]
+    [Header("Fonts")]
     public TMP_FontAsset globalFont;
 
     [Header("Events")]
@@ -38,7 +38,7 @@ public class StoryManager : MonoBehaviour
 
     private int  _currentDay  = 0;
     private int  _debtPaid    = 0;
-    private int  _debtRemaining => totalDebt - _debtPaid;
+    private int  _debtRemaining => Mathf.Max(0, totalDebt - _debtPaid);
     private bool _gameEnded   = false;
     private bool _waitingForSummaryConfirm  = false;
     private bool _isHandlingPhaseTransition = false;
@@ -69,11 +69,14 @@ public class StoryManager : MonoBehaviour
         // Подписка на фазы GameManager
         if (GameManager.Instance != null)
         {
+            // День начинается: инкрементируем счетчик дней
             GameManager.Instance.onDayBegin.AddListener(() =>
             {
                 if (!_gameEnded) _currentDay++;
             });
-            GameManager.Instance.onNightBegin.AddListener(OnDayEnded);
+
+            // День ЗАКОНЧИЛСЯ (начинается ночь): именно здесь показываем итоги дня!
+            GameManager.Instance.onNightBegin.AddListener(OnDayPhaseEnded);
         }
 
         StartCoroutine(RunBackstory());
@@ -83,7 +86,7 @@ public class StoryManager : MonoBehaviour
     {
         if (_debtHudLabel != null && _currentDay > 0)
         {
-            _debtHudLabel.text = $"ДЕНЬ {_currentDay}/{totalDays} | ДОЛГ: ${_debtRemaining}";
+            _debtHudLabel.text = $"DAY {_currentDay}/{totalDays} | DEBT: ${_debtRemaining}";
         }
     }
 
@@ -116,15 +119,17 @@ public class StoryManager : MonoBehaviour
         Time.timeScale = 1f;
         onStoryFinished?.Invoke();
 
+        // Начинаем игру с Дня 1 (или Ночи, если фазы идут Ночь->День. 
+        // По коду GameManager стартует с указанной в инспекторе фазы)
         if (GameManager.Instance != null)
-            GameManager.Instance.BeginPhase(GamePhase.Night);
+            GameManager.Instance.BeginPhase(GameManager.Instance.currentPhase);
 
         if (ScreenFader.Instance != null)
             yield return ScreenFader.Instance.FadeFromBlack(1.2f);
     }
 
-    // ── Конец дня ─────────────────────────────────────────────────────────────
-    void OnDayEnded()
+    // ── Вызывается, когда ДЕНЬ завершился и должна начаться НОЧЬ ──────────────
+    void OnDayPhaseEnded()
     {
         if (_gameEnded || _currentDay == 0 || _isHandlingPhaseTransition) return;
         StartCoroutine(DayEndSequence());
@@ -132,35 +137,58 @@ public class StoryManager : MonoBehaviour
 
     IEnumerator DayEndSequence()
     {
+        Debug.Log($"[StoryManager] DayEndSequence started. Current Day: {_currentDay}/{totalDays}");
         _isHandlingPhaseTransition = true;
 
-        if (ScreenFader.Instance != null)
-            yield return ScreenFader.Instance.FadeToBlack(1f);
+        // Останавливаем время и фиксируем заработок игрока в счет долга
+        int moneyOnHands = PlayerEconomy.Instance?.Money ?? 0;
+        int toPay = Mathf.Min(moneyOnHands, _debtRemaining);
+        
+        Debug.Log($"[StoryManager] Money on hands: {moneyOnHands}, to pay: {toPay}");
+        if (toPay > 0 && PlayerEconomy.Instance != null)
+        {
+            PlayerEconomy.Instance.SpendMoney(toPay);
+            _debtPaid += toPay;
+            Debug.Log($"[StoryManager] Paid {toPay}. Total paid: {_debtPaid}. Remaining: {_debtRemaining}");
+        }
 
+        // Проверяем, настал ли конец игры (завершился последний 3-й день)
         if (_currentDay >= totalDays)
         {
+            Debug.Log("[StoryManager] Final day reached! Preparing for endgame sequence.");
+            _gameEnded = true;
+            Time.timeScale = 0f; // Останавливаем таймеры полностью
+
+            if (ScreenFader.Instance != null)
+            {
+                Debug.Log("[StoryManager] Setting screen to black for endgame...");
+                ScreenFader.Instance.SetBlack();
+            }
+
             _isHandlingPhaseTransition = false;
             CheckEndCondition();
             yield break;
         }
 
+        // Если это еще не 3-й день, просто показываем промежуточные итоги дня
+        Debug.Log("[StoryManager] Showing daily summary...");
         ShowSummary();
     }
 
     void ShowSummary()
     {
-        Time.timeScale = 0f;
+        Time.timeScale = 0f; // Ставим игру на паузу во время итогов
         _uiCanvas.gameObject.SetActive(true);
         _summaryPanel.SetActive(true);
         _waitingForSummaryConfirm = true;
 
-        int money = PlayerEconomy.Instance?.Money ?? 0;
+        int moneyLeft = PlayerEconomy.Instance?.Money ?? 0;
         _summaryText.text = 
-            $"<size=32><color=#FFD700>КОНЕЦ ДНЯ {_currentDay}</color></size>\n\n" +
-            $"На руках: <color=white>${money}</color>\n" +
-            $"Выплачено: <color=green>${_debtPaid}</color>\n" +
-            $"Остаток долга: <color=red>${_debtRemaining}</color>\n\n" +
-            $"Дней до финала: {totalDays - _currentDay}";
+            $"<size=32><color=#FFD700>DAY {_currentDay} SUMMARY</color></size>\n\n" +
+            $"Collected and paid today: <color=green>${_debtPaid}</color>\n" +
+            $"Cash remaining: <color=white>${moneyLeft}</color>\n" +
+            $"REMAINING DEBT: <color=red>${_debtRemaining}</color>\n\n" +
+            $"Days left: {totalDays - _currentDay}";
     }
 
     public void OnSummaryContinuePressed()
@@ -168,53 +196,53 @@ public class StoryManager : MonoBehaviour
         _waitingForSummaryConfirm = false;
         _summaryPanel.SetActive(false);
         _uiCanvas.gameObject.SetActive(false);
-        Time.timeScale = 1f;
+        Time.timeScale = 1f; // Возвращаем время игры в норму
 
-        if (!_gameEnded)
-        {
-            if (ScreenFader.Instance != null)
-                StartCoroutine(ScreenFader.Instance.FadeFromBlack(1f));
-            
-            if (GameManager.Instance != null && GameManager.Instance.currentPhase != GamePhase.Night)
-                GameManager.Instance.BeginPhase(GamePhase.Night);
-        }
         _isHandlingPhaseTransition = false;
     }
 
-    // ── Финальная проверка ────────────────────────────────────────────────────
+    // ── Финальная проверка после 3 дней ───────────────────────────────────────
     void CheckEndCondition()
     {
-        if (_gameEnded) return;
-        
-        // Автоматическая выплата долга из остатка на руках
-        int money = PlayerEconomy.Instance?.Money ?? 0;
-        if (money > 0)
-        {
-            int toPay = Mathf.Min(money, _debtRemaining);
-            PlayerEconomy.Instance.SpendMoney(toPay);
-            _debtPaid += toPay;
-        }
-
-        _gameEnded = true;
+        Debug.Log($"[StoryManager] CheckEndCondition started. Debt Remaining: {_debtRemaining}");
+        _uiCanvas.gameObject.SetActive(false);
 
         if (_debtRemaining <= 0)
         {
+            Debug.Log("[StoryManager] Condition met: VICTORY!");
             onGameWin?.Invoke();
-            EndingScreen.Instance?.ShowVictory();
+            if (EndingScreen.Instance != null)
+            {
+                Debug.Log("[StoryManager] Calling EndingScreen.ShowVictory()");
+                EndingScreen.Instance.ShowVictory();
+            }
+            else
+            {
+                Debug.LogError("[StoryManager] EndingScreen.Instance is NULL! Cannot show victory screen.");
+            }
         }
         else
         {
+            Debug.Log("[StoryManager] Condition met: DEFEAT (Not enough money).");
             onGameOver?.Invoke();
-            EndingScreen.Instance?.ShowDefeat($"Ты не успел собрать всю сумму.\nОстаток долга: ${_debtRemaining}");
+            string failReason = $"You will share the fate of your homeless friends.\nRemaining debt: ${_debtRemaining}";
+            if (EndingScreen.Instance != null)
+            {
+                Debug.Log("[StoryManager] Calling EndingScreen.ShowDefeat()");
+                EndingScreen.Instance.ShowDefeat(failReason);
+            }
+            else
+            {
+                Debug.LogError("[StoryManager] EndingScreen.Instance is NULL! Cannot show defeat screen.");
+            }
         }
     }
 
-    // ── Постройка интерфейса ──────────────────────────────────────────────────
+    // ── Автоматическая сборка интерфейса ──────────────────────────────────────
     void BuildProgrammaticUI()
     {
-        // 1. Canvas — оставляем корневым (БЕЗ SetParent к StoryManager), чтобы он сразу подхватывал размеры экрана
         GameObject canvasGO = new GameObject("[StoryUI]", typeof(RectTransform));
-        DontDestroyOnLoad(canvasGO); // Так как StoryManager не уничтожается, Canvas тоже должен жить между сценами
+        DontDestroyOnLoad(canvasGO);
         
         _uiCanvas = canvasGO.AddComponent<Canvas>();
         _uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -225,14 +253,12 @@ public class StoryManager : MonoBehaviour
         sc.referenceResolution = new Vector2(1920, 1080);
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // 2. Black BG — создаем сразу как RectTransform
         GameObject bgGO = new GameObject("BlackBG", typeof(RectTransform));
         bgGO.transform.SetParent(canvasGO.transform, false);
         Image bgImg = bgGO.AddComponent<Image>();
         bgImg.color = Color.black;
         Stretch(bgGO.GetComponent<RectTransform>());
 
-        // 3. Story Label — создаем сразу как RectTransform
         GameObject storyGO = new GameObject("StoryLabel", typeof(RectTransform));
         storyGO.transform.SetParent(canvasGO.transform, false);
         _storyLabel = storyGO.AddComponent<TextMeshProUGUI>();
@@ -242,11 +268,10 @@ public class StoryManager : MonoBehaviour
         _storyLabel.enableWordWrapping = true;
         Stretch(storyGO.GetComponent<RectTransform>(), 100f);
 
-        // 4. Summary Panel — создаем сразу как RectTransform
         _summaryPanel = new GameObject("SummaryPanel", typeof(RectTransform));
         _summaryPanel.transform.SetParent(canvasGO.transform, false);
         Image sBg = _summaryPanel.AddComponent<Image>();
-        sBg.color = new Color(0, 0, 0, 0.85f);
+        sBg.color = new Color(0, 0, 0, 0.9f);
         Stretch(_summaryPanel.GetComponent<RectTransform>(), 400f, 250f);
 
         GameObject sTextGO = new GameObject("SummaryText", typeof(RectTransform));
@@ -257,7 +282,6 @@ public class StoryManager : MonoBehaviour
         _summaryText.fontSize = 24f;
         Stretch(sTextGO.GetComponent<RectTransform>(), 20f, 80f);
 
-        // Button — создаем сразу как RectTransform
         GameObject btnGO = new GameObject("ContinueBtn", typeof(RectTransform));
         btnGO.transform.SetParent(_summaryPanel.transform, false);
         Image bImg = btnGO.AddComponent<Image>();
@@ -269,19 +293,18 @@ public class StoryManager : MonoBehaviour
         bRT.anchorMin = new Vector2(0.5f, 0);
         bRT.anchorMax = new Vector2(0.5f, 0);
         bRT.pivot = new Vector2(0.5f, 0);
-        bRT.sizeDelta = new Vector2(200, 50);
-        bRT.anchoredPosition = new Vector2(0, 30);
+        bRT.sizeDelta = new Vector2(240, 60);
+        bRT.anchoredPosition = new Vector2(0, 40);
 
         GameObject bTextGO = new GameObject("Text", typeof(RectTransform));
         bTextGO.transform.SetParent(btnGO.transform, false);
         TMP_Text bt = bTextGO.AddComponent<TextMeshProUGUI>();
         ApplyFont(bt);
-        bt.text = "ПРОДОЛЖИТЬ";
+        bt.text = "CONTINUE";
         bt.alignment = TextAlignmentOptions.Center;
         bt.fontSize = 18f;
         Stretch(bTextGO.GetComponent<RectTransform>());
 
-        // 5. HUD Debt — создаем сразу как RectTransform
         GameObject hudGO = new GameObject("DebtHUD", typeof(RectTransform));
         hudGO.transform.SetParent(canvasGO.transform, false);
         _debtHudLabel = hudGO.AddComponent<TextMeshProUGUI>();
@@ -291,7 +314,7 @@ public class StoryManager : MonoBehaviour
         RectTransform hRT = hudGO.GetComponent<RectTransform>();
         hRT.anchorMin = hRT.anchorMax = new Vector2(1, 1);
         hRT.pivot = new Vector2(1, 1);
-        hRT.sizeDelta = new Vector2(400, 50);
+        hRT.sizeDelta = new Vector2(500, 50);
         hRT.anchoredPosition = new Vector2(-20, -20);
 
         _uiCanvas.gameObject.SetActive(false);
