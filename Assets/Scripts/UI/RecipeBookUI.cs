@@ -17,6 +17,7 @@ public class RecipeBookUI : MonoBehaviour
     public TMP_FontAsset customFont;                       // Опциональный шрифт
 
     // UI Elements
+    private GameObject _root;
     private GameObject _panel;
     private Image _recipeImage;
     private TMP_Text _recipesContent;
@@ -63,20 +64,16 @@ public class RecipeBookUI : MonoBehaviour
     public void Open()
     {
         _isOpen = true;
-        _panel.SetActive(true);
+        if (_root != null) _root.SetActive(true);
         RefreshFonts();
         RefreshData();
         AudioManager.Instance?.Play("ui_open");
-        
-        // Pause game (optional, user might want to check info during gameplay)
-        // Time.timeScale = 0f; 
     }
 
     public void Close()
     {
         _isOpen = false;
-        _panel.SetActive(false);
-        // Time.timeScale = 1f;
+        if (_root != null) _root.SetActive(false);
     }
 
     private void RefreshData()
@@ -98,44 +95,9 @@ public class RecipeBookUI : MonoBehaviour
         _recipesContent.text = recipesText;
     }
 
-    private void UpdateInventory(List<IngredientStack> inventory)
-    {
-        foreach (Transform child in _inventoryGrid) Destroy(child.gameObject);
-
-        foreach (var stack in inventory)
-        {
-            if (stack.ingredient == null || stack.amount <= 0) continue;
-
-            var itemGo = new GameObject("Item", typeof(RectTransform));
-            itemGo.transform.SetParent(_inventoryGrid, false);
-            
-            var horizontal = itemGo.AddComponent<HorizontalLayoutGroup>();
-            horizontal.spacing = 10f;
-            horizontal.childControlWidth = true;
-            horizontal.childForceExpandWidth = false;
-
-            // Icon
-            var iconGo = new GameObject("Icon", typeof(RectTransform));
-            iconGo.transform.SetParent(itemGo.transform, false);
-            var iconImg = iconGo.AddComponent<Image>();
-            iconImg.sprite = stack.ingredient.sprite;
-            iconImg.preserveAspect = true;
-            iconGo.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
-
-            // Name x Count
-            var textGo = new GameObject("Text", typeof(RectTransform));
-            textGo.transform.SetParent(itemGo.transform, false);
-            var tmp = textGo.AddComponent<TextMeshProUGUI>();
-            StoryManager.ApplyFont(tmp);
-            tmp.text = $"{stack.ingredient.ingredientName} x{stack.amount}";
-            tmp.fontSize = 16f;
-            tmp.alignment = TextAlignmentOptions.Left;
-        }
-    }
-
     private void BuildUI()
     {
-        var canvasGo = new GameObject("NotebookCanvas", typeof(RectTransform));
+        var canvasGo = new GameObject("RecipeBookCanvas", typeof(RectTransform));
         canvasGo.transform.SetParent(transform);
         var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -146,15 +108,21 @@ public class RecipeBookUI : MonoBehaviour
         sc.referenceResolution = new Vector2(1920, 1080);
         canvasGo.AddComponent<GraphicRaycaster>();
 
+        // ── Root container ──
+        _root = new GameObject("RecipeUI_Root", typeof(RectTransform));
+        _root.transform.SetParent(canvasGo.transform, false);
+        Stretch(_root.GetComponent<RectTransform>());
+
         // Background Overlay
-        var overlay = new GameObject("Overlay", typeof(RectTransform));
-        overlay.transform.SetParent(canvasGo.transform, false);
-        overlay.AddComponent<Image>().color = new Color(0, 0, 0, 0.4f);
+        var overlay = new GameObject("RecipeUI_Overlay", typeof(RectTransform));
+        overlay.transform.SetParent(_root.transform, false);
+        var overlayImg = overlay.AddComponent<Image>();
+        overlayImg.color = new Color(0, 0, 0, 0.4f);
         Stretch(overlay.GetComponent<RectTransform>());
 
         // Main Panel
         _panel = new GameObject("NotebookPanel", typeof(RectTransform));
-        _panel.transform.SetParent(canvasGo.transform, false);
+        _panel.transform.SetParent(_root.transform, false);
         var panelImg = _panel.AddComponent<Image>();
         panelImg.color = panelColor;
         
