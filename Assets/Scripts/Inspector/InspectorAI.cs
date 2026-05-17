@@ -66,6 +66,12 @@ public class InspectorAI : MonoBehaviour
             TriggerFine();
     }
 
+    public void ResetSuspicion()
+    {
+        suspicion = 0f;
+        onSuspicionChanged?.Invoke(0f);
+    }
+
     void UpdateRoam()
     {
         if (waypoints == null || waypoints.Length == 0) return;

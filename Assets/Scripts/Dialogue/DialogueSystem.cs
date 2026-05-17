@@ -10,7 +10,7 @@ public class DialogueSystem : MonoBehaviour
     public List<DialogueAsset> dialogueAssets = new List<DialogueAsset>();
     public float autoAdvanceDelay = 0.1f;
 
-    public UnityEvent<string, string, Sprite> onLineStart;
+    public UnityEvent<DialogueLine> onLineStart;
     public UnityEvent<List<DialogueChoice>>   onShowChoices;
     public UnityEvent                       onDialogueEnd;
 
@@ -78,10 +78,7 @@ public class DialogueSystem : MonoBehaviour
         if (_currentLineIndex >= _currentNode.lines.Count) { ProceedToChoices(); return; }
 
         DialogueLine line = _currentNode.lines[_currentLineIndex];
-        onLineStart?.Invoke(line.speakerName, line.text, line.portrait);
-
-        if (line.voiceClip != null)
-            AudioSource.PlayClipAtPoint(line.voiceClip, Camera.main.transform.position);
+        onLineStart?.Invoke(line);
 
         if (_currentNode.autoAdvance)
             StartCoroutine(AutoAdvance(line.voiceClip != null ? line.voiceClip.length : 2f));

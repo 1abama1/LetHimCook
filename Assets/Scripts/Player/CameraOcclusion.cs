@@ -63,8 +63,12 @@ public class CameraOcclusion : MonoBehaviour
 
         foreach (var r in _toRemove)
         {
-            r.materials = _originalMats[r];
+            if (r != null) r.materials = _originalMats[r];
             _originalMats.Remove(r);
+            if (_fadeMats.ContainsKey(r))
+            {
+                foreach(var m in _fadeMats[r]) if (m != null) Destroy(m);
+            }
             _fadeMats.Remove(r);
             _currentAlphas.Remove(r);
         }
@@ -75,19 +79,46 @@ public class CameraOcclusion : MonoBehaviour
         _originalMats[r] = r.materials;
         Material[] transMats = new Material[r.materials.Length];
         
+        Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
+        if (litShader == null) litShader = Shader.Find("Standard");
+
         for (int i = 0; i < r.materials.Length; i++)
         {
-            transMats[i] = new Material(r.materials[i]);
+            Material orig = r.materials[i];
+            Texture mainTex = orig.mainTexture;
+            if (mainTex == null)
+            {
+                foreach (string prop in orig.GetTexturePropertyNames())
+                {
+                    Texture t = orig.GetTexture(prop);
+                    if (t != null) { mainTex = t; break; }
+                }
+            }
+
+            Color mainColor = Color.white;
+            if (orig.HasProperty("_BaseColor")) mainColor = orig.GetColor("_BaseColor");
+            else if (orig.HasProperty("_Color")) mainColor = orig.GetColor("_Color");
+
+            Material fadeMat = new Material(litShader);
+            if (mainTex != null)
+            {
+                if (fadeMat.HasProperty("_BaseMap")) fadeMat.SetTexture("_BaseMap", mainTex);
+                if (fadeMat.HasProperty("_MainTex")) fadeMat.SetTexture("_MainTex", mainTex);
+            }
+            if (fadeMat.HasProperty("_BaseColor")) fadeMat.SetColor("_BaseColor", mainColor);
+            if (fadeMat.HasProperty("_Color")) fadeMat.SetColor("_Color", mainColor);
             
-            transMats[i].SetFloat("_Surface", 1); 
-            transMats[i].SetFloat("_Mode", 3);
-            transMats[i].SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            transMats[i].SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            transMats[i].SetInt("_ZWrite", 0);
-            transMats[i].DisableKeyword("_ALPHATEST_ON");
-            transMats[i].EnableKeyword("_ALPHABLEND_ON");
-            transMats[i].DisableKeyword("_ALPHAPREMULTIPLY_ON");
-            transMats[i].renderQueue = 3000;
+            fadeMat.SetFloat("_Surface", 1); 
+            fadeMat.SetFloat("_Mode", 3);
+            fadeMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            fadeMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            fadeMat.SetInt("_ZWrite", 0);
+            fadeMat.DisableKeyword("_ALPHATEST_ON");
+            fadeMat.EnableKeyword("_ALPHABLEND_ON");
+            fadeMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            fadeMat.renderQueue = 3000;
+            
+            transMats[i] = fadeMat;
         }
         
         _fadeMats[r] = transMats;
@@ -105,7 +136,7 @@ public class CameraOcclusion : MonoBehaviour
                 c.a = a;
                 mats[i].SetColor("_BaseColor", c);
             }
-            if (mats[i].HasProperty("_Color"))
+            else if (mats[i].HasProperty("_Color"))
             {
                 Color c = mats[i].GetColor("_Color");
                 c.a = a;
