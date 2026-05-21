@@ -52,7 +52,7 @@ public class EndingScreen : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+
 
         Build();
         _canvas.gameObject.SetActive(false);

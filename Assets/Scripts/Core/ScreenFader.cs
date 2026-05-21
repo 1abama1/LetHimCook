@@ -24,7 +24,7 @@ public class ScreenFader : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+
             EnsureUI();
 
             // Стартуем с чёрным экраном — он откроется после первого BeginPhase

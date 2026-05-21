@@ -317,6 +317,25 @@ public class PlayerController : MonoBehaviour
         // Тарелка уже привязана через SetParent в GivePlate / TakePlate — ничего дополнительного не нужно.
     }
 
+    public void ClearHandsForNight()
+    {
+        if (_heldIngredient != null)
+        {
+            if (PlayerEconomy.Instance != null) PlayerEconomy.Instance.AddIngredient(_heldIngredient);
+            TakeIngredient();
+        }
+        if (HeldPlate != null)
+        {
+            if (PlayerEconomy.Instance != null && HeldPlate.ingredients != null)
+            {
+                foreach(var ing in HeldPlate.ingredients) 
+                    if (ing != null) PlayerEconomy.Instance.AddIngredient(ing);
+            }
+            var plate = TakePlate();
+            if (plate != null) Destroy(plate.gameObject);
+        }
+    }
+
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;

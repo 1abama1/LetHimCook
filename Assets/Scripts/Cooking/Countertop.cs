@@ -10,6 +10,10 @@ public class Countertop : MonoBehaviour, IInteractable
     public IngredientData storedIngredient;
     public Plate          storedPlate;
 
+    [Header("Auto Spawn")]
+    public bool autoSpawnPlate = false;
+    public Plate defaultPlatePrefab;
+
     [Header("Visual")]
     public Transform itemAnchor;            // позиция где показываем предмет
     public GameObject ingredientIconPrefab;
@@ -18,8 +22,12 @@ public class Countertop : MonoBehaviour, IInteractable
 
     void Start()
     {
-        // Если тарелка назначена в инспекторе как префаб — создаем инстанс
-        if (storedPlate != null && !storedPlate.gameObject.scene.IsValid())
+        if (autoSpawnPlate && defaultPlatePrefab != null && storedPlate == null)
+        {
+            Plate instance = Instantiate(defaultPlatePrefab);
+            PlacePlate(instance);
+        }
+        else if (storedPlate != null && !storedPlate.gameObject.scene.IsValid())
         {
             Plate instance = Instantiate(storedPlate);
             PlacePlate(instance);
@@ -94,6 +102,30 @@ public class Countertop : MonoBehaviour, IInteractable
             storedIngredient = null;
             RefreshVisual();
         }
+    }
+
+    public void ResetCountertop()
+    {
+        if (storedIngredient != null && PlayerEconomy.Instance != null)
+            PlayerEconomy.Instance.AddIngredient(storedIngredient);
+        storedIngredient = null;
+        
+        if (storedPlate != null)
+        {
+            if (PlayerEconomy.Instance != null && storedPlate.ingredients != null)
+                foreach(var ing in storedPlate.ingredients) 
+                    if (ing != null) PlayerEconomy.Instance.AddIngredient(ing);
+            Destroy(storedPlate.gameObject);
+            storedPlate = null;
+        }
+
+        if (autoSpawnPlate && defaultPlatePrefab != null)
+        {
+            Plate instance = Instantiate(defaultPlatePrefab);
+            PlacePlate(instance);
+        }
+
+        RefreshVisual();
     }
 
     void PlacePlate(Plate plate)

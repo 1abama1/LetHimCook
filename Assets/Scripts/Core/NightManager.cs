@@ -41,6 +41,9 @@ public class NightManager : MonoBehaviour
     private float _savedFogDensity;
     private Color _savedFogColor;
 
+    private Dumpster[] _allDumpsters;
+    private HomelessNPC[] _allHomeless;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -49,6 +52,10 @@ public class NightManager : MonoBehaviour
 
     void Start()
     {
+        // Кэшируем все баки и бомжи до того, как они будут деактивированы фазой дня
+        _allDumpsters = FindObjectsByType<Dumpster>(FindObjectsSortMode.None);
+        _allHomeless  = FindObjectsByType<HomelessNPC>(FindObjectsSortMode.None);
+
         // Сохраняем дневные настройки
         _savedAmbient   = RenderSettings.ambientLight;
         _savedFog       = RenderSettings.fog;
@@ -76,6 +83,16 @@ public class NightManager : MonoBehaviour
 
         foreach (var obj in nightObjects) if (obj != null) obj.SetActive(true);
         foreach (var obj in dayObjects)   if (obj != null) obj.SetActive(false);
+
+        // Сброс объектов для новой ночи
+        if (_allDumpsters != null)
+        {
+            foreach (var d in _allDumpsters) if (d != null) d.ResetForNewNight();
+        }
+        if (_allHomeless != null)
+        {
+            foreach (var h in _allHomeless) if (h != null) h.ResetForNewNight();
+        }
 
         StartCoroutine(TransitionAmbient(dayAmbientColor, nightAmbientColor));
 

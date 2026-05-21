@@ -50,7 +50,7 @@ public class GameManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+
     }
 
     void Start()
@@ -166,6 +166,19 @@ public class GameManager : MonoBehaviour
             phaseTimer = dayDurationSeconds;
             ResetAllSuspicion();
             onDayBegin?.Invoke();
+
+            // Создаем ShopUI программно, если его еще нет
+            if (ShopUI.Instance == null)
+            {
+                GameObject shopGo = new GameObject("ShopSystem");
+                shopGo.AddComponent<ShopUI>();
+            }
+
+            // Показываем магазин и ждем, пока игрок закончит покупки
+            if (ShopUI.Instance != null)
+            {
+                yield return StartCoroutine(ShopUI.Instance.ShowShopCoroutine());
+            }
         }
 
         // Ждем, пока StoryManager показывает итоги дня

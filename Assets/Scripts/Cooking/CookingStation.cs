@@ -28,6 +28,12 @@ public class CookingStation : MonoBehaviour, IInteractable
     public bool           IsReady           { get; private set; }
     public float          CookProgress      => IsCooking ? 1f - (_timer / _duration) : (IsReady ? 1f : 0f);
 
+    [Header("Visuals")]
+    public Transform itemAnchor;
+    public GameObject ingredientIconPrefab;
+
+    private GameObject _currentVisual;
+
     private float _timer;
     private float _duration;
     private bool  _ingredientHidden;
@@ -41,10 +47,18 @@ public class CookingStation : MonoBehaviour, IInteractable
         if (progressBar == null)
         {
             var go = new GameObject($"{stationName}_Bar");
-            go.transform.SetParent(transform);
-            go.transform.localPosition = progressBarOffset;
+            go.transform.position = transform.position + new Vector3(0, 1.5f, 0);
+            go.transform.SetParent(transform, true);
             progressBar = go.AddComponent<WorldSpaceBar>();
         }
+        else
+        {
+            progressBar.transform.SetParent(null, true);
+            progressBar.transform.position = transform.position + new Vector3(0, 1.5f, 0);
+            progressBar.transform.SetParent(transform, true);
+        }
+
+        RefreshVisual();
     }
 
     // ── IInteractable ──────────────────────────────────────
@@ -60,6 +74,7 @@ public class CookingStation : MonoBehaviour, IInteractable
                     CurrentIngredient = null;
                     IsReady = false;
                     ResetBar();
+                    RefreshVisual();
                     onIngredientTaken?.Invoke();
                 }
             }
@@ -81,6 +96,7 @@ public class CookingStation : MonoBehaviour, IInteractable
             CurrentIngredient = null;
             IsReady = false;
             ResetBar();
+            RefreshVisual();
             onIngredientTaken?.Invoke();
             return;
         }
@@ -91,6 +107,7 @@ public class CookingStation : MonoBehaviour, IInteractable
             player.GiveIngredient(CurrentIngredient);
             CurrentIngredient = null;
             ResetBar();
+            RefreshVisual();
         }
     }
 
@@ -109,6 +126,8 @@ public class CookingStation : MonoBehaviour, IInteractable
         _ingredientHidden = false;
         IsReady           = false;
         _duration         = ingredient.cookedVersion != null ? 8f : 5f;
+
+        RefreshVisual(); // Показываем положенный ингредиент
 
         Debug.Log($"[{stationName}] Начинаем готовить {ingredient.ingredientName}");
         onIngredientPlaced?.Invoke(ingredient);
@@ -141,7 +160,10 @@ public class CookingStation : MonoBehaviour, IInteractable
 
         // Трансформация
         if (CurrentIngredient.cookedVersion != null)
+        {
             CurrentIngredient = CurrentIngredient.cookedVersion;
+            RefreshVisual(); // Обновляем визуал на приготовленный!
+        }
 
         IsReady = true;
         progressBar?.UpdateProgress(1f);
@@ -150,16 +172,71 @@ public class CookingStation : MonoBehaviour, IInteractable
         AudioManager.Instance?.Play("cook_done");
     }
 
+    public void ResetStation()
+    {
+        CurrentIngredient = null;
+        IsReady = false;
+        IsCooking = false;
+        _ingredientHidden = false;
+        ResetBar();
+        RefreshVisual();
+        onIngredientTaken?.Invoke();
+    }
+
     void StopCooking() { IsCooking = false; ResetBar(); }
     void ResetBar()    { progressBar?.UpdateProgress(0f); }
+
+    // ── Visuals ────────────────────────────────────────────
+    void RefreshVisual()
+    {
+        if (_currentVisual) Destroy(_currentVisual);
+
+        if (CurrentIngredient != null)
+        {
+            Transform anchor = itemAnchor != null ? itemAnchor : transform;
+            
+            GameObject prefab = CurrentIngredient.modelPrefab != null
+                ? CurrentIngredient.modelPrefab
+                : ingredientIconPrefab;
+
+            if (prefab != null)
+            {
+                _currentVisual = Instantiate(prefab, anchor);
+                
+                Vector3 baseOffset = itemAnchor == null ? new Vector3(0, 0.8f, 0) : Vector3.zero;
+                
+                _currentVisual.transform.localPosition = baseOffset + CurrentIngredient.countertopOffset;
+                _currentVisual.transform.localRotation = Quaternion.Euler(CurrentIngredient.countertopRotation);
+                _currentVisual.transform.localScale    = Vector3.one * (CurrentIngredient.visualScale * 0.01f);
+
+                if (prefab == ingredientIconPrefab)
+                {
+                    var sr = _currentVisual.GetComponent<SpriteRenderer>();
+                    if (sr != null && CurrentIngredient.sprite != null)
+                        sr.sprite = CurrentIngredient.sprite;
+                }
+
+                if (CurrentIngredient.tintColor != Color.white)
+                {
+                    foreach (var r in _currentVisual.GetComponentsInChildren<Renderer>())
+                        r.material.color = CurrentIngredient.tintColor;
+                }
+            }
+        }
+    }
 
     // ── Inspector helpers ──────────────────────────────────
     public void HideIngredient()
     {
         if (CurrentIngredient == null || !CurrentIngredient.IsSpoiled) return;
         _ingredientHidden = true;
+        if (_currentVisual != null) _currentVisual.SetActive(false);
     }
-    public void RevealIngredient() => _ingredientHidden = false;
+    public void RevealIngredient() 
+    {
+        _ingredientHidden = false;
+        if (_currentVisual != null) _currentVisual.SetActive(true);
+    }
     public bool IsIngredientHidden => _ingredientHidden;
 
     void OnDrawGizmosSelected()

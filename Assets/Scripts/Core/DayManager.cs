@@ -51,10 +51,6 @@ public class DayManager : MonoBehaviour
     // ─── Начало дня ───────────────────────────────────────────────────────────
     public void OnDayBegin()
     {
-        // Покупаем свежие ингредиенты автоматически (если есть деньги)
-        if (freshIngredientsBudget > 0)
-            PlayerEconomy.Instance?.BuyFreshIngredients(freshIngredientsBudget);
-
         // Назначаем рецепт
         if (autoAssignRecipe && RecipeManager.Instance != null)
         {
@@ -77,18 +73,31 @@ public class DayManager : MonoBehaviour
     // ─── Конец дня / начало ночи ──────────────────────────────────────────────
     public void OnNightBegin()
     {
-        if (autoSellJunk)
-        {
-            int junk = PlayerEconomy.Instance?.JunkLoot ?? 0;
-            if (junk > 0)
-            {
-                PlayerEconomy.Instance.SellJunkLoot();
-                Debug.Log($"[DayManager] Night started — sold {junk} junk loot.");
-            }
-        }
-
         foreach (var p in _activePointers) if (p != null) Destroy(p.gameObject);
         _activePointers.Clear();
+
+        // 1. Очистка рук игрока
+        var player = FindFirstObjectByType<PlayerController>();
+        if (player != null) player.ClearHandsForNight();
+
+        // 2. Сброс кухонных станций
+        var stations = FindObjectsByType<CookingStation>(FindObjectsSortMode.None);
+        foreach(var st in stations) st.ResetStation();
+
+        // 3. Сброс столов (Countertops)
+        var countertops = FindObjectsByType<Countertop>(FindObjectsSortMode.None);
+        foreach(var ct in countertops) ct.ResetCountertop();
+
+        // 4. Удаление оставшихся тарелок
+        var plates = FindObjectsByType<Plate>(FindObjectsSortMode.None);
+        foreach(var p in plates) Destroy(p.gameObject);
+
+        // 5. Удаление клиентов и очереди
+        var clients = FindObjectsByType<ClientNPC>(FindObjectsSortMode.None);
+        foreach(var c in clients) Destroy(c.gameObject);
+        
+        var spawner = FindFirstObjectByType<ClientSpawner>();
+        if (spawner != null) spawner.ClearQueue();
 
         onDayEnd?.Invoke();
     }

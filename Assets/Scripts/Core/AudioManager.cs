@@ -60,7 +60,8 @@ public class AudioManager : MonoBehaviour
         AudioSource src = go.AddComponent<AudioSource>();
         src.clip   = entry.clip;
         src.volume = entry.volume;
-        src.pitch  = Random.Range(1f / entry.pitchVariance, entry.pitchVariance);
+        float pVar = Mathf.Max(0.1f, entry.pitchVariance);
+        src.pitch  = Random.Range(1f / pVar, pVar);
         src.loop   = entry.loop;
         src.Play();
 

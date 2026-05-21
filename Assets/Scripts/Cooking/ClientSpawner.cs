@@ -127,6 +127,11 @@ public class ClientSpawner : MonoBehaviour
     public Transform WindowPoint => windowPoint;
     public Transform ExitPoint   => exitPoint;
 
+    public void ClearQueue()
+    {
+        _queue.Clear();
+    }
+
     void OnDayBegin()
     {
         _isDayPhase = true;

@@ -438,6 +438,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &86678815
 MeshRenderer:
@@ -672,6 +674,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 801992861}
   ingredientIconPrefab: {fileID: 0}
 --- !u!1 &142169000
@@ -755,6 +759,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 1556033396}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &149148519
@@ -963,6 +969,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 26720572}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &153608414
@@ -1788,78 +1796,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 59ae297c64ba2f14d8293eff237cce24, type: 3}
   m_PrefabInstance: {fileID: 718490042}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &232871587
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 232871588}
-  - component: {fileID: 232871590}
-  - component: {fileID: 232871589}
-  m_Layer: 6
-  m_Name: WSB
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &232871588
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 232871587}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.00028}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2040312464}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0.00031}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &232871589
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 232871587}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe409bdeba57ae14b832c85b521c5f9c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WorldSpaceBar
---- !u!223 &232871590
-Canvas:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 232871587}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_RenderMode: 2
-  m_Camera: {fileID: 0}
-  m_PlaneDistance: 100
-  m_PixelPerfect: 0
-  m_ReceivesEvents: 1
-  m_OverrideSorting: 0
-  m_OverridePixelPerfect: 0
-  m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
-  m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
-  m_TargetDisplay: 0
 --- !u!1 &260245300
 GameObject:
   m_ObjectHideFlags: 0
@@ -2065,6 +2001,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 3581203796048612210, guid: 1cba40f6b1fed384faa32133dae70249, type: 3}
+  autoSpawnPlate: 1
+  defaultPlatePrefab: {fileID: 3581203796048612210, guid: 1cba40f6b1fed384faa32133dae70249, type: 3}
   itemAnchor: {fileID: 476924291}
   ingredientIconPrefab: {fileID: 0}
 --- !u!1 &296638926
@@ -2466,6 +2404,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 476219832}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &343541087
@@ -2707,6 +2647,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &355025763
 MeshRenderer:
@@ -3187,6 +3129,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 648328403}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &416988140
@@ -3463,6 +3407,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 3581203796048612210, guid: 1cba40f6b1fed384faa32133dae70249, type: 3}
+  autoSpawnPlate: 1
+  defaultPlatePrefab: {fileID: 3581203796048612210, guid: 1cba40f6b1fed384faa32133dae70249, type: 3}
   itemAnchor: {fileID: 1865452738}
   ingredientIconPrefab: {fileID: 0}
 --- !u!1 &445905068
@@ -3588,6 +3534,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 840759549}
   ingredientIconPrefab: {fileID: 0}
 --- !u!1 &469526739 stripped
@@ -4789,12 +4737,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -2052089571971636508, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1864309987}
-    - targetCorrespondingSourceObject: {fileID: 2107152031798894002, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1296390270}
-    - targetCorrespondingSourceObject: {fileID: 83919670466158694, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 232871588}
     - targetCorrespondingSourceObject: {fileID: -1514917677430035069, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 840759549}
@@ -5369,6 +5311,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &567745373
 MeshRenderer:
@@ -5655,6 +5599,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 832271384}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &670431670
@@ -5801,6 +5747,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &671570650
 MeshRenderer:
@@ -7130,7 +7078,6 @@ GameObject:
   - component: {fileID: 882663150}
   - component: {fileID: 882663148}
   - component: {fileID: 882663151}
-  - component: {fileID: 882663149}
   - component: {fileID: 882663140}
   - component: {fileID: 882663139}
   - component: {fileID: 882663145}
@@ -7244,7 +7191,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94f273ca86f899b4e8e8188f0d2006d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerEconomy
-  startingMoney: 50
+  startingMoney: 20
   freshIngredientCostPerUnit: 10
   defaultFreshIngredient: {fileID: 11400000, guid: a21130231df0c2f4397f386e7ff476c9, type: 2}
   defaultSpoiledIngredient: {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
@@ -7252,23 +7199,23 @@ MonoBehaviour:
   _junkLoot: 3
   inventory:
   - ingredient: {fileID: 11400000, guid: a21130231df0c2f4397f386e7ff476c9, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: d3db5e5a813c3794baee205b2ec1f103, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: 5b5cccf825ce78340a0b71110f7e7173, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: 225d34694fcc05b45a6e5c397c2c7916, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: eee66a7d94b778041900d0259543b552, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: 7f69be37ec8d04b4c8100b2de7562441, type: 2}
-    amount: 10
+    amount: 5
   - ingredient: {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
-    amount: 10
+    amount: 5
   onMoneyChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -7291,8 +7238,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   currentPhase: 0
-  dayDurationSeconds: 250
-  nightDurationSeconds: 70
+  dayDurationSeconds: 50
+  nightDurationSeconds: 10
   daySpawnPosition: {x: 50.55, y: 0.49183, z: -47.63}
   daySpawnRotation: {x: 0, y: 0, z: 0}
   nightSpawnPosition: {x: 36.678, y: 0.88983, z: -47.76}
@@ -7459,8 +7406,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cae49584b6ef2494998e801e680cb0ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StoryManager
-  totalDebt: 10
-  totalDays: 4
+  totalDebt: 1000
+  totalDays: 3
   backstoryText: "You\u2019re a chef. Chef Tony. One day, your restaurant got some
     unwanted 'protection' from the mafia. Now you owe them 1000$ if you don't want
     to kick the bucket, you should give them this money in 3 days. Well... time to
@@ -7511,21 +7458,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &882663149
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 882663136}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7be76757fefdbcf41a560f1c626360c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameOverScreen
-  restartSceneName: Morning
-  appearDelay: 0.4
-  fadeInDuration: 1.2
 --- !u!114 &882663150
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9050,6 +8982,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &1191998025
 MeshRenderer:
@@ -9323,78 +9257,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 6416302070336371891, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
---- !u!1 &1296390269
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1296390270}
-  - component: {fileID: 1296390272}
-  - component: {fileID: 1296390271}
-  m_Layer: 0
-  m_Name: WSB
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1296390270
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1296390269}
-  m_LocalRotation: {x: -0, y: 0.000000029802319, z: -0.0011451541, w: 0.99999934}
-  m_LocalPosition: {x: 0, y: 0, z: 3.907985e-16}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1446976367}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -0.131}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -1.1368684e-15, y: 0.000000013113022}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1296390271
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1296390269}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe409bdeba57ae14b832c85b521c5f9c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WorldSpaceBar
---- !u!223 &1296390272
-Canvas:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1296390269}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_RenderMode: 2
-  m_Camera: {fileID: 0}
-  m_PlaneDistance: 100
-  m_PixelPerfect: 0
-  m_ReceivesEvents: 1
-  m_OverrideSorting: 0
-  m_OverridePixelPerfect: 0
-  m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
-  m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
-  m_TargetDisplay: 0
 --- !u!1001 &1302573936
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10055,11 +9917,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3758684178517959276, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
   m_PrefabInstance: {fileID: 504970100}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &1446976367 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 2107152031798894002, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
-  m_PrefabInstance: {fileID: 504970100}
-  m_PrefabAsset: {fileID: 0}
 --- !u!64 &1446976370
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -10107,6 +9964,8 @@ MonoBehaviour:
   onIngredientTaken:
     m_PersistentCalls:
       m_Calls: []
+  itemAnchor: {fileID: 0}
+  ingredientIconPrefab: {fileID: 0}
 --- !u!1 &1451943580 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -9164063582363142765, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
@@ -10153,6 +10012,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 103886100}
   ingredientIconPrefab: {fileID: 0}
 --- !u!1 &1456748104
@@ -11064,6 +10925,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &1626661318
 MeshRenderer:
@@ -11779,6 +11642,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 802350028}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &1799771019
@@ -11917,6 +11782,8 @@ MonoBehaviour:
   onIngredientTaken:
     m_PersistentCalls:
       m_Calls: []
+  itemAnchor: {fileID: 0}
+  ingredientIconPrefab: {fileID: 0}
 --- !u!1 &1812202800 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -4871186189851197572, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
@@ -12436,6 +12303,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 983942658}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &1928290299
@@ -12674,6 +12543,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 1126630746}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &1977232447
@@ -13216,6 +13087,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
+  autoSpawnPlate: 0
+  defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 662670113}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &2010657390
@@ -13728,11 +13601,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 1969526030146542260, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
   m_PrefabInstance: {fileID: 504970100}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &2040312464 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 83919670466158694, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
-  m_PrefabInstance: {fileID: 504970100}
-  m_PrefabAsset: {fileID: 0}
 --- !u!64 &2040312467
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -13780,6 +13648,8 @@ MonoBehaviour:
   onIngredientTaken:
     m_PersistentCalls:
       m_Calls: []
+  itemAnchor: {fileID: 0}
+  ingredientIconPrefab: {fileID: 0}
 --- !u!1 &2049169920 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4804320799209909515, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}
@@ -13837,6 +13707,8 @@ MonoBehaviour:
   onIngredientTaken:
     m_PersistentCalls:
       m_Calls: []
+  itemAnchor: {fileID: 0}
+  ingredientIconPrefab: {fileID: 0}
 --- !u!1 &2052533054 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8916201535369214184, guid: 34126ad774445e044bf3b11403eb8f6c, type: 3}

@@ -35,6 +35,13 @@ public class HomelessNPC : MonoBehaviour, IInteractable
 
     private bool _lootTaken;
 
+    public void ResetForNewNight()
+    {
+        state = HomelessState.Idle;
+        _lootTaken = false;
+        gameObject.SetActive(true);
+    }
+
     // ── IInteractable ─────────────────────────────────────────────────────────
 
     public void Interact(PlayerController player)

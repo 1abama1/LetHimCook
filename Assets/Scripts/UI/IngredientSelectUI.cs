@@ -25,7 +25,7 @@ public class IngredientSelectUI : MonoBehaviour
             return; 
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+
         EnsureEventSystem();
         BuildUI();
         Close(); // Изначально закрыто
@@ -137,7 +137,7 @@ public class IngredientSelectUI : MonoBehaviour
         card.transform.SetParent(_grid, false);
 
         var cardImg = card.AddComponent<Image>();
-        cardImg.color = new Color(0.18f, 0.18f, 0.23f, 1f);
+        cardImg.color = ingredient.IsSafe ? new Color(0.15f, 0.25f, 0.18f, 1f) : new Color(0.28f, 0.15f, 0.15f, 1f);
 
         var le = card.AddComponent<LayoutElement>();
         le.preferredWidth  = 120f;
@@ -185,10 +185,26 @@ public class IngredientSelectUI : MonoBehaviour
         nameTmp.raycastTarget = false;
 
         var nr = nameTmp.rectTransform;
-        nr.anchorMin = new Vector2(0f, 0f);
-        nr.anchorMax = new Vector2(1f, 0.30f);
+        nr.anchorMin = new Vector2(0f, 0.16f);
+        nr.anchorMax = new Vector2(1f, 0.32f);
         nr.offsetMin = new Vector2(4, 2);
         nr.offsetMax = new Vector2(-4, -2);
+
+        // ── Type label ────────────────────────────────────────────────────────
+        var typeGo  = new GameObject("Type", typeof(RectTransform));
+        typeGo.transform.SetParent(card.transform, false);
+        var typeTmp = typeGo.AddComponent<TextMeshProUGUI>();
+        StoryManager.ApplyFont(typeTmp);
+        typeTmp.text          = ingredient.IsSafe ? "<color=#55FF55>Fresh</color>" : "<color=#FF5555>Spoiled</color>";
+        typeTmp.fontSize      = 11f;
+        typeTmp.alignment     = TextAlignmentOptions.Center;
+        typeTmp.raycastTarget = false;
+
+        var tr = typeTmp.rectTransform;
+        tr.anchorMin = new Vector2(0f, 0f);
+        tr.anchorMax = new Vector2(1f, 0.16f);
+        tr.offsetMin = new Vector2(4, 2);
+        tr.offsetMax = new Vector2(-4, 0);
 
         // ── Count badge ───────────────────────────────────────────────────────
         var badgeGo  = new GameObject("Badge", typeof(RectTransform));
@@ -262,7 +278,7 @@ public class IngredientSelectUI : MonoBehaviour
     private void BuildUI()
     {
         var cvGo = new GameObject("IngSelectCanvas");
-        DontDestroyOnLoad(cvGo);
+
 
         _canvas = cvGo.AddComponent<Canvas>();
         _canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
@@ -380,7 +396,7 @@ public class IngredientSelectUI : MonoBehaviour
         if (es == null)
         {
             var esGo = new GameObject("EventSystem");
-            DontDestroyOnLoad(esGo);
+
             es = esGo.AddComponent<EventSystem>();
             esGo.AddComponent<InputSystemUIInputModule>();
             Debug.Log("[IngredientSelectUI] EventSystem создан (InputSystem)");

@@ -52,7 +52,7 @@ public class StoryManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+
         
         BuildProgrammaticUI();
     }
@@ -242,7 +242,7 @@ public class StoryManager : MonoBehaviour
     void BuildProgrammaticUI()
     {
         GameObject canvasGO = new GameObject("[StoryUI]", typeof(RectTransform));
-        DontDestroyOnLoad(canvasGO);
+
         
         _uiCanvas = canvasGO.AddComponent<Canvas>();
         _uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;

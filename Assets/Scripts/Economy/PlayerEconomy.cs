@@ -236,6 +236,18 @@ public class PlayerEconomy : MonoBehaviour
         return true;
     }
 
+    public bool BuySingleIngredient(IngredientData data, int cost)
+    {
+        if (!SpendMoney(cost)) return false;
+        AddIngredient(data);
+        return true;
+    }
+
+    public List<IngredientStack> GetAllIngredients()
+    {
+        return inventory;
+    }
+
     public void SellJunkLoot()
     {
         int revenue = _junkLoot * 3;

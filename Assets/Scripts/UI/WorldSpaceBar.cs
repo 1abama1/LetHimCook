@@ -21,14 +21,11 @@ public class WorldSpaceBar : MonoBehaviour
 
     void BuildCanvas()
     {
-        // Если холст уже есть (например, при перезагрузке или дублировании), не создаем новый
         if (transform.Find("WSB_Canvas") != null)
         {
             var existing = transform.Find("WSB_Canvas");
-            _canvasTransform = existing;
-            _slider = existing.GetComponentInChildren<Slider>();
-            _visualRoot = existing.Find("VisualRoot")?.gameObject;
-            return;
+            existing.name = "WSB_Canvas_OLD";
+            Destroy(existing.gameObject);
         }
 
         // ИСПРАВЛЕНИЕ: Добавлен typeof(RectTransform)
@@ -38,10 +35,17 @@ public class WorldSpaceBar : MonoBehaviour
 
         var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 100;
 
         var rt = canvasGo.GetComponent<RectTransform>();
         rt.sizeDelta  = new Vector2(50f, 15f);
-        rt.localScale = Vector3.one * 0.01f;
+        
+        // Гарантируем, что холст будет на позиции родителя, а его мировой масштаб всегда будет 0.01
+        canvasGo.transform.SetParent(transform, false); // Сначала наследуем позицию и ротацию
+        canvasGo.transform.SetParent(null, true);       // Отвязываем, сохраняя позицию
+        canvasGo.transform.localScale = Vector3.one * 0.01f; // Жёстко задаём нужный мировой масштаб
+        canvasGo.transform.SetParent(transform, true);  // Привязываем обратно
 
         var scaler = canvasGo.AddComponent<CanvasScaler>();
         scaler.dynamicPixelsPerUnit = 10f;
@@ -138,19 +142,29 @@ public class WorldSpaceBar : MonoBehaviour
 
     void Update()
     {
-        // Полоска всегда смотрит на камеру
-        if (_canvasTransform != null && _mainCamera != null)
+        if (_mainCamera == null)
         {
-            _canvasTransform.LookAt(
-                _canvasTransform.position + _mainCamera.transform.rotation * Vector3.forward,
-                _mainCamera.transform.rotation * Vector3.up);
+            _mainCamera = Camera.main;
+            if (_mainCamera == null) _mainCamera = Object.FindFirstObjectByType<Camera>();
+        }
+
+        // Полоска всегда смотрит на камеру
+        if (_canvasTransform != null && _mainCamera != null && _canvasTransform.gameObject.activeSelf)
+        {
+            _canvasTransform.rotation = _mainCamera.transform.rotation;
         }
     }
 
     public void UpdateProgress(float progress)
     {
-        if (_canvasTransform != null)
-            _canvasTransform.gameObject.SetActive(progress > 0f && progress < 1f);
+        if (_visualRoot != null)
+        {
+            bool shouldBeActive = progress > 0f;
+            if (_visualRoot.activeSelf != shouldBeActive)
+            {
+                _visualRoot.SetActive(shouldBeActive);
+            }
+        }
 
         if (_slider != null)
             _slider.value = progress;

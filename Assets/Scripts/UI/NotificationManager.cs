@@ -19,7 +19,7 @@ public class NotificationManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+
 
         BuildContainer();
     }
@@ -192,7 +192,7 @@ public class NotificationManager : MonoBehaviour
             cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             cs.referenceResolution = new Vector2(1920, 1080);
             parentTransform = canvasGo.transform;
-            DontDestroyOnLoad(canvasGo);
+
         }
 
         _container = new GameObject("NotificationContainer", typeof(RectTransform));
