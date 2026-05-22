@@ -48,7 +48,36 @@ public class InspectorAI : MonoBehaviour
         _stations = FindObjectsByType<CookingStation>(FindObjectsSortMode.None);
         _waitAtWaypoint = new WaitForSeconds(waitAtWaypointSeconds);
         _surpriseTurnWait = new WaitForSeconds(surpriseTurnDuration);
+        
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.onNightBegin.AddListener(OnNightBegin);
+            GameManager.Instance.onDayBegin.AddListener(OnDayBegin);
+        }
+    }
+
+    void OnEnable()
+    {
         StartCoroutine(SurpriseTurnRoutine());
+    }
+
+    void OnNightBegin()
+    {
+        gameObject.SetActive(false);
+    }
+
+    void OnDayBegin()
+    {
+        ResetSuspicion();
+        _currentWaypoint = 0;
+        _state = InspectorState.Roam;
+        
+        if (waypoints != null && waypoints.Length > 0)
+        {
+            transform.position = waypoints[0].position;
+        }
+        
+        gameObject.SetActive(true);
     }
 
     void Update()

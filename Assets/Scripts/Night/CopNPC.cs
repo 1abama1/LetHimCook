@@ -104,6 +104,28 @@ public class CopNPC : MonoBehaviour
         if (_state == CopState.Chase) TransitionTo(CopState.Patrol);
     }
 
+    /// <summary>
+    /// Полный сброс копа на новую ночь: возврат на стартовую точку,
+    /// сброс состояния и подозрения, перезапуск патруля.
+    /// </summary>
+    public void ResetForNewNight()
+    {
+        StopAllCoroutines();
+        _suspicionTimer = 0f;
+        _isWaiting = false;
+        _currentPoint = 0;
+        _state = CopState.Patrol;
+        onSuspicionChanged?.Invoke(0f);
+
+        if (patrolPoints != null && patrolPoints.Length > 0)
+        {
+            transform.position = patrolPoints[0].position;
+            transform.rotation = patrolPoints[0].rotation;
+        }
+
+        gameObject.SetActive(true);
+    }
+
     void UpdateSuspicious()
     {
         if (CanSeePlayer())
@@ -143,7 +165,9 @@ public class CopNPC : MonoBehaviour
         }
 
         MoveTowards(_player.position, chaseSpeed);
-        if (Vector3.Distance(transform.position, _player.position) < arrestRange)
+        
+        Vector3 playerPosSameHeight = new Vector3(_player.position.x, transform.position.y, _player.position.z);
+        if (Vector3.Distance(transform.position, playerPosSameHeight) < arrestRange)
             Arrest();
     }
 

@@ -63,6 +63,8 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (Time.timeScale == 0f) return;
+
         if (_isInDialogue)
         {
             _moveInput = Vector3.zero;

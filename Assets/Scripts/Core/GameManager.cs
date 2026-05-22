@@ -9,6 +9,9 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    [Header("Economy Reference")]
+    public PlayerEconomy playerEconomy;
+
     [Header("Phase Settings")]
     public GamePhase currentPhase = GamePhase.Night;
     public float dayDurationSeconds  = 180f;
@@ -102,6 +105,7 @@ public class GameManager : MonoBehaviour
         if (phase == GamePhase.Night)
         {
             phaseTimer = nightDurationSeconds;
+            ResetAllCops();
             onNightBegin?.Invoke();
         }
         else
@@ -207,20 +211,61 @@ public class GameManager : MonoBehaviour
     public void TriggerArrest()
     {
         onArrest?.Invoke();
-        PlayerEconomy.Instance?.LoseAllNightResources();
+        
+        int fine = 10;
+        PlayerEconomy eco = playerEconomy != null ? playerEconomy : PlayerEconomy.Instance;
+        if (eco != null)
+        {
+            eco.SpendMoney(fine);
+            eco.LoseAllNightResources();
+        }
 
         if (currentPhase == GamePhase.Night && !_transitioning)
         {
             Debug.Log("[GameManager] Игрок арестован! Скипаем ночь.");
             _phaseActive = false;
-            StartCoroutine(FadeTransition(GamePhase.Day));
+            StartCoroutine(ArrestSequence(fine));
         }
+    }
+
+    private System.Collections.IEnumerator ArrestSequence(int fine)
+    {
+        _transitioning = true; // Блокируем другие переходы
+
+        var go = new GameObject("BustedUI");
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 9999;
+        
+        var txtGo = new GameObject("Text");
+        txtGo.transform.SetParent(go.transform, false);
+        var rt = txtGo.AddComponent<RectTransform>();
+        rt.anchoredPosition = new Vector2(0, 0);
+        rt.sizeDelta = new Vector2(1000, 400);
+        
+        var tmp = txtGo.AddComponent<TMPro.TextMeshProUGUI>();
+        StoryManager.ApplyFont(tmp);
+        tmp.text = $"BUSTED!\n<color=red>-${fine}</color>";
+        tmp.fontSize = 120;
+        tmp.alignment = TMPro.TextAlignmentOptions.Center;
+        tmp.fontStyle = TMPro.FontStyles.Bold;
+
+        // Даем игроку 2.5 секунды осознать штраф
+        yield return new WaitForSeconds(2.5f);
+
+        // Удаляем надпись ДО того, как появится магазин или остановится время
+        if (go != null) Destroy(go);
+
+        // Разблокируем переход и сразу запускаем затемнение и следующий день
+        _transitioning = false;
+        StartCoroutine(FadeTransition(GamePhase.Day));
     }
 
     public void TriggerInspectorFine(int amount)
     {
         onInspectorFine?.Invoke();
-        PlayerEconomy.Instance?.SpendMoney(amount);
+        PlayerEconomy eco = playerEconomy != null ? playerEconomy : PlayerEconomy.Instance;
+        eco?.SpendMoney(amount);
     }
 
     private void ResetAllSuspicion()
@@ -230,6 +275,13 @@ public class GameManager : MonoBehaviour
 
         var inspectors = FindObjectsByType<InspectorAI>(FindObjectsSortMode.None);
         foreach (var i in inspectors) if (i != null) i.ResetSuspicion();
+    }
+
+    private void ResetAllCops()
+    {
+        var cops = FindObjectsByType<CopNPC>(FindObjectsSortMode.None);
+        foreach (var c in cops)
+            if (c != null) c.ResetForNewNight();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

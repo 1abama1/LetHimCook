@@ -37,8 +37,6 @@ public class StoryManager : MonoBehaviour
     private TMP_Text   _debtHudLabel;
 
     private int  _currentDay  = 0;
-    private int  _debtPaid    = 0;
-    private int  _debtRemaining => Mathf.Max(0, totalDebt - _debtPaid);
     private bool _gameEnded   = false;
     private bool _waitingForSummaryConfirm  = false;
     private bool _isHandlingPhaseTransition = false;
@@ -46,7 +44,6 @@ public class StoryManager : MonoBehaviour
     public bool IsShowingSummary => _waitingForSummaryConfirm;
     public bool IsGameEnded      => _gameEnded;
     public int  CurrentDay       => _currentDay;
-    public int  DebtPaid         => _debtPaid;
 
     void Awake()
     {
@@ -86,7 +83,8 @@ public class StoryManager : MonoBehaviour
     {
         if (_debtHudLabel != null && _currentDay > 0)
         {
-            _debtHudLabel.text = $"DAY {_currentDay}/{totalDays} | DEBT: ${_debtRemaining}";
+            int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
+            _debtHudLabel.text = $"DAY {_currentDay}/{totalDays} | ${currentMoney} / ${totalDebt}";
         }
     }
 
@@ -140,24 +138,12 @@ public class StoryManager : MonoBehaviour
         Debug.Log($"[StoryManager] DayEndSequence started. Current Day: {_currentDay}/{totalDays}");
         _isHandlingPhaseTransition = true;
 
-        // Останавливаем время и фиксируем заработок игрока в счет долга
-        int moneyOnHands = PlayerEconomy.Instance?.Money ?? 0;
-        int toPay = Mathf.Min(moneyOnHands, _debtRemaining);
-        
-        Debug.Log($"[StoryManager] Money on hands: {moneyOnHands}, to pay: {toPay}");
-        if (toPay > 0 && PlayerEconomy.Instance != null)
-        {
-            PlayerEconomy.Instance.SpendMoney(toPay);
-            _debtPaid += toPay;
-            Debug.Log($"[StoryManager] Paid {toPay}. Total paid: {_debtPaid}. Remaining: {_debtRemaining}");
-        }
-
-        // Проверяем, настал ли конец игры (завершился последний 3-й день)
+        // Проверяем, настал ли конец игры (завершился последний день)
         if (_currentDay >= totalDays)
         {
             Debug.Log("[StoryManager] Final day reached! Preparing for endgame sequence.");
             _gameEnded = true;
-            Time.timeScale = 0f; // Останавливаем таймеры полностью
+            Time.timeScale = 0f;
 
             if (ScreenFader.Instance != null)
             {
@@ -170,25 +156,30 @@ public class StoryManager : MonoBehaviour
             yield break;
         }
 
-        // Если это еще не 3-й день, просто показываем промежуточные итоги дня
+        // Если это еще не последний день, показываем промежуточные итоги
         Debug.Log("[StoryManager] Showing daily summary...");
         ShowSummary();
     }
 
     void ShowSummary()
     {
-        Time.timeScale = 0f; // Ставим игру на паузу во время итогов
+        Time.timeScale = 0f;
         _uiCanvas.gameObject.SetActive(true);
         _summaryPanel.SetActive(true);
         _waitingForSummaryConfirm = true;
 
-        int moneyLeft = PlayerEconomy.Instance?.Money ?? 0;
+        int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
+        int daysLeft = totalDays - _currentDay;
+        string status = currentMoney >= totalDebt 
+            ? "<color=green>ENOUGH TO PAY OFF!</color>" 
+            : $"<color=red>NEED ${totalDebt - currentMoney} MORE</color>";
+
         _summaryText.text = 
             $"<size=32><color=#FFD700>DAY {_currentDay} SUMMARY</color></size>\n\n" +
-            $"Collected and paid today: <color=green>${_debtPaid}</color>\n" +
-            $"Cash remaining: <color=white>${moneyLeft}</color>\n" +
-            $"REMAINING DEBT: <color=red>${_debtRemaining}</color>\n\n" +
-            $"Days left: {totalDays - _currentDay}";
+            $"Your cash: <color=white>${currentMoney}</color>\n" +
+            $"Debt target: <color=red>${totalDebt}</color>\n" +
+            $"{status}\n\n" +
+            $"Days left: {daysLeft}";
     }
 
     public void OnSummaryContinuePressed()
@@ -201,39 +192,39 @@ public class StoryManager : MonoBehaviour
         _isHandlingPhaseTransition = false;
     }
 
-    // ── Финальная проверка после 3 дней ───────────────────────────────────────
+    // ── Финальная проверка после последнего дня ─────────────────────────────────
     void CheckEndCondition()
     {
-        Debug.Log($"[StoryManager] CheckEndCondition started. Debt Remaining: {_debtRemaining}");
+        int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
+        Debug.Log($"[StoryManager] CheckEndCondition. Money: {currentMoney}, Debt: {totalDebt}");
         _uiCanvas.gameObject.SetActive(false);
 
-        if (_debtRemaining <= 0)
+        if (currentMoney >= totalDebt)
         {
-            Debug.Log("[StoryManager] Condition met: VICTORY!");
+            Debug.Log("[StoryManager] VICTORY! Player has enough money.");
             onGameWin?.Invoke();
             if (EndingScreen.Instance != null)
             {
-                Debug.Log("[StoryManager] Calling EndingScreen.ShowVictory()");
                 EndingScreen.Instance.ShowVictory();
             }
             else
             {
-                Debug.LogError("[StoryManager] EndingScreen.Instance is NULL! Cannot show victory screen.");
+                Debug.LogError("[StoryManager] EndingScreen.Instance is NULL!");
             }
         }
         else
         {
-            Debug.Log("[StoryManager] Condition met: DEFEAT (Not enough money).");
+            Debug.Log("[StoryManager] DEFEAT. Not enough money.");
             onGameOver?.Invoke();
-            string failReason = $"You will share the fate of your homeless friends.\nRemaining debt: ${_debtRemaining}";
+            int shortage = totalDebt - currentMoney;
+            string failReason = $"You couldn't collect enough money.\nYou had ${currentMoney}, but needed ${totalDebt}.\nShortage: ${shortage}";
             if (EndingScreen.Instance != null)
             {
-                Debug.Log("[StoryManager] Calling EndingScreen.ShowDefeat()");
                 EndingScreen.Instance.ShowDefeat(failReason);
             }
             else
             {
-                Debug.LogError("[StoryManager] EndingScreen.Instance is NULL! Cannot show defeat screen.");
+                Debug.LogError("[StoryManager] EndingScreen.Instance is NULL!");
             }
         }
     }

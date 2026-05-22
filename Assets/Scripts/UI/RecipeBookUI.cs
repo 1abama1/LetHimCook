@@ -80,10 +80,10 @@ public class RecipeBookUI : MonoBehaviour
     {
         if (StoryManager.Instance != null)
         {
-            int paid = StoryManager.Instance.DebtPaid;
+            int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
             int total = StoryManager.Instance.totalDebt;
             int daysLeft = StoryManager.Instance.totalDays - StoryManager.Instance.CurrentDay;
-            _debtTitle.text = $"DEBT: ${paid} / ${total} | DAYS LEFT: {daysLeft}";
+            _debtTitle.text = $"CASH: ${currentMoney} / ${total} | DAYS LEFT: {daysLeft}";
         }
 
         if (recipeSprite != null)

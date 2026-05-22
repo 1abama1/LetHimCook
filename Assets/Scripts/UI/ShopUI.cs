@@ -22,6 +22,7 @@ public class ShopUI : MonoBehaviour
     private TMP_Text _emptyInventoryLabel;
 
     private bool _isShopping;
+    public bool IsShopping => _isShopping;
     private List<IngredientData> _purchasableIngredients = new List<IngredientData>();
 
     void Awake()
@@ -43,8 +44,8 @@ public class ShopUI : MonoBehaviour
         _purchasableIngredients.Clear();
         List<IngredientData> allIngredients = new List<IngredientData>();
 
-        // 1. Resources search
-        var loaded = Resources.FindObjectsOfTypeAll<IngredientData>();
+        // 1. Resources search (All ingredients in Assets/Resources/Ingredients)
+        var loaded = Resources.LoadAll<IngredientData>("Ingredients");
         foreach (var ing in loaded)
         {
             if (ing != null && !allIngredients.Exists(x => x.ingredientName == ing.ingredientName))
