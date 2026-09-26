@@ -33,12 +33,20 @@ public class CopNPC : MonoBehaviour
     private CopState  _state = CopState.Patrol;
     private int       _currentPoint;
     private Transform _player;
+    private PlayerController _playerController;
     private float     _suspicionTimer;
     private bool      _isWaiting;
     private FlashlightController _playerFlashlight;
     private Animator             _animator;
+    private bool                 _lastIsMoving;
 
+    private readonly RaycastHit[] _visionHits = new RaycastHit[1];
+    private float _visionCheckTimer;
+    private bool _canSeePlayerCached;
 
+    private static readonly int IsWalkingHash = Animator.StringToHash("IsWalking");
+    private static readonly int CopCheckHash = Animator.StringToHash("CopCheck");
+    private static readonly int AttackHash = Animator.StringToHash("Attack");
 
     void Awake()
     {
@@ -46,8 +54,9 @@ public class CopNPC : MonoBehaviour
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p)
         {
-            _player          = p.transform;
+            _player           = p.transform;
             _playerFlashlight = p.GetComponent<FlashlightController>();
+            _playerController = p.GetComponent<PlayerController>();
         }
     }
 
@@ -56,7 +65,11 @@ public class CopNPC : MonoBehaviour
         if (_animator != null)
         {
             bool isMoving = (_state == CopState.Patrol && !_isWaiting) || (_state == CopState.Chase);
-            _animator.SetBool("IsWalking", isMoving);
+            if (isMoving != _lastIsMoving)
+            {
+                _lastIsMoving = isMoving;
+                _animator.SetBool(IsWalkingHash, isMoving);
+            }
         }
 
         if (copSpotlight != null)
@@ -77,17 +90,27 @@ public class CopNPC : MonoBehaviour
     void UpdatePatrol()
     {
         if (patrolPoints == null || patrolPoints.Length == 0) return;
-        if (CanSeePlayer()) { TransitionTo(CopState.Suspicious); return; }
+        if (CheckVisionThrottled()) { TransitionTo(CopState.Suspicious); return; }
         if (_isWaiting) return;
 
-        MoveTowards(patrolPoints[_currentPoint].position, patrolSpeed);
+        Vector3 targetPos = patrolPoints[_currentPoint].position;
+        MoveTowards(targetPos, patrolSpeed);
 
-        float dist = Vector3.Distance(
-            new Vector3(transform.position.x, 0, transform.position.z),
-            new Vector3(patrolPoints[_currentPoint].position.x, 0, patrolPoints[_currentPoint].position.z));
-
-        if (dist < 0.25f)
+        float dx = transform.position.x - targetPos.x;
+        float dz = transform.position.z - targetPos.z;
+        if (dx * dx + dz * dz < 0.25f * 0.25f)
             StartCoroutine(WaitAndNext());
+    }
+
+    private bool CheckVisionThrottled()
+    {
+        _visionCheckTimer -= Time.deltaTime;
+        if (_visionCheckTimer <= 0f)
+        {
+            _visionCheckTimer = 0.06f;
+            _canSeePlayerCached = CanSeePlayer();
+        }
+        return _canSeePlayerCached;
     }
 
     IEnumerator WaitAndNext()
@@ -128,10 +151,10 @@ public class CopNPC : MonoBehaviour
 
     void UpdateSuspicious()
     {
-        if (CanSeePlayer())
+        if (CheckVisionThrottled())
         {
             if (_suspicionTimer == 0f && _animator != null)
-                _animator.SetTrigger("CopCheck");
+                _animator.SetTrigger(CopCheckHash);
 
             _suspicionTimer += Time.deltaTime;
             onSuspicionChanged?.Invoke(SuspicionPercent * 100f);
@@ -156,8 +179,7 @@ public class CopNPC : MonoBehaviour
     {
         if (_player == null) { TransitionTo(CopState.Patrol); return; }
 
-        PlayerController pc = _player.GetComponent<PlayerController>();
-        if (pc != null && pc.IsHiding)
+        if (_playerController != null && _playerController.IsHiding)
         {
             _suspicionTimer = 0f;
             TransitionTo(CopState.Patrol);
@@ -165,17 +187,18 @@ public class CopNPC : MonoBehaviour
         }
 
         MoveTowards(_player.position, chaseSpeed);
-        
+
         Vector3 playerPosSameHeight = new Vector3(_player.position.x, transform.position.y, _player.position.z);
-        if (Vector3.Distance(transform.position, playerPosSameHeight) < arrestRange)
+        Vector3 diff = transform.position - playerPosSameHeight;
+        if (diff.sqrMagnitude < arrestRange * arrestRange)
             Arrest();
     }
 
     void Arrest()
     {
         _state = CopState.Arrest;
-        if (_animator != null) _animator.SetTrigger("Attack");
-        
+        if (_animator != null) _animator.SetTrigger(AttackHash);
+
         onArrestPlayer?.Invoke();
         GameManager.Instance?.TriggerArrest();
     }
@@ -188,16 +211,27 @@ public class CopNPC : MonoBehaviour
         // Фонарик расширяет эффективный радиус зрения
         float mult   = _playerFlashlight != null ? _playerFlashlight.DetectionMult : 1f;
         float range  = visionRange * mult;
-        float angle  = visionAngle;  // угол не меняем — меняем дальность
+        float distanceSq = toPlayer.sqrMagnitude;
+        if (distanceSq > range * range) return false;
 
-        if (toPlayer.magnitude > range) return false;
-        if (Vector3.Angle(transform.forward, toPlayer) > angle) return false;
-        if (Physics.Raycast(transform.position, toPlayer.normalized, toPlayer.magnitude, obstacleLayer))
-            return false;
-        return true;
+        float dot = Vector3.Dot(transform.forward, toPlayer);
+        if (dot <= 0f) return false;
+
+        float cos = Mathf.Cos(visionAngle * Mathf.Deg2Rad);
+        if (dot * dot < distanceSq * cos * cos) return false;
+
+        float distance = Mathf.Sqrt(distanceSq);
+        Vector3 direction = toPlayer / distance;
+
+        return Physics.RaycastNonAlloc(
+            transform.position,
+            direction,
+            _visionHits,
+            distance,
+            obstacleLayer,
+            QueryTriggerInteraction.Ignore
+        ) == 0;
     }
-
-
 
     void MoveTowards(Vector3 target, float speed)
     {
@@ -209,7 +243,11 @@ public class CopNPC : MonoBehaviour
         transform.position = Vector3.MoveTowards(transform.position, targetAtSameHeight, speed * Time.deltaTime);
     }
 
-    void TransitionTo(CopState newState) => _state = newState;
+    void TransitionTo(CopState newState)
+    {
+        _state = newState;
+        _visionCheckTimer = 0f;
+    }
 
     public float SuspicionPercent => Mathf.Clamp01(_suspicionTimer / suspicionBuildTime);
 

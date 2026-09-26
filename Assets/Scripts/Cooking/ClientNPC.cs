@@ -45,9 +45,13 @@ public class ClientNPC : MonoBehaviour
     private bool          _isServed;
     private ClientSpawner _spawner;
     private Animator      _animator;
+    private bool          _lastIsWalking;
+
+    private static readonly int IsWalkingHash = Animator.StringToHash("IsWalking");
 
     // ── Auto-created UI ────────────────────────────────────────────
     private Slider     _patienceSlider;
+    private Image      _sliderFillImg;
     private GameObject _patienceSliderGO;
     private GameObject _orderBubbleGO;
     private Canvas     _worldCanvas;
@@ -134,6 +138,7 @@ public class ClientNPC : MonoBehaviour
         fillRect.sizeDelta = Vector2.zero;
         var fillImg  = fill.AddComponent<Image>();
         fillImg.color = new Color(0.2f, 0.85f, 0.3f);
+        _sliderFillImg = fillImg;
 
         // Slider component
         _patienceSlider                     = _patienceSliderGO.AddComponent<Slider>();
@@ -228,19 +233,30 @@ public class ClientNPC : MonoBehaviour
     // ── Unity loop ─────────────────────────────────────────────────
     void Update()
     {
-        // Canvas всегда смотрит на камеру
+        // Canvas смотрит на камеру только когда отображаются элементы UI
         if (_worldCanvas != null && _mainCamera != null)
-            _worldCanvas.transform.rotation = _mainCamera.transform.rotation;
+        {
+            if ((_patienceSliderGO != null && _patienceSliderGO.activeSelf) ||
+                (_orderBubbleGO != null && _orderBubbleGO.activeSelf))
+            {
+                _worldCanvas.transform.rotation = _mainCamera.transform.rotation;
+            }
+        }
 
-        // Цвет слайдера по уровню терпения
-        UpdateSliderColor();
+        // Цвет слайдера обновляем только пока клиент находится у окошка
+        if (_state == State.AtWindow)
+            UpdateSliderColor();
 
         if (_animator != null)
         {
             bool isWalking = _state == State.WalkingToQueue ||
                              _state == State.WalkingToWindow ||
                              _state == State.WalkingToExit;
-            _animator.SetBool("IsWalking", isWalking);
+            if (isWalking != _lastIsWalking)
+            {
+                _lastIsWalking = isWalking;
+                _animator.SetBool(IsWalkingHash, isWalking);
+            }
         }
 
         switch (_state)
@@ -284,7 +300,7 @@ public class ClientNPC : MonoBehaviour
 
     void UpdateSliderColor()
     {
-        if (_patienceSlider == null) return;
+        if (_sliderFillImg == null) return;
 
         float t = _currentPatience / patienceTime;
         // Зелёный → жёлтый → красный
@@ -292,11 +308,7 @@ public class ClientNPC : MonoBehaviour
             ? Color.Lerp(new Color(1f, 0.8f, 0f), new Color(0.2f, 0.85f, 0.3f), (t - 0.5f) * 2f)
             : Color.Lerp(new Color(0.9f, 0.1f, 0.1f), new Color(1f, 0.8f, 0f), t * 2f);
 
-        if (_patienceSlider.fillRect != null)
-        {
-            var img = _patienceSlider.fillRect.GetComponent<Image>();
-            if (img != null) img.color = c;
-        }
+        _sliderFillImg.color = c;
     }
 
     // ── Internal helpers ───────────────────────────────────────────
@@ -317,7 +329,15 @@ public class ClientNPC : MonoBehaviour
     bool Arrived(Vector3 target)
     {
         Vector3 flat = new Vector3(target.x, transform.position.y, target.z);
-        return Vector3.Distance(transform.position, flat) <= arrivalThreshold;
+        return (transform.position - flat).sqrMagnitude <= arrivalThreshold * arrivalThreshold;
+    }
+
+    void OnDestroy()
+    {
+        if (!_isServed && _spawner != null && _state != State.Done && _state != State.WalkingToExit)
+        {
+            _spawner.OnClientLeft(this);
+        }
     }
 
     void ArriveAtWindow()

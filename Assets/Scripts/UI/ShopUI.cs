@@ -28,6 +28,37 @@ public class ShopUI : MonoBehaviour
     private bool _isShopping;
     public bool IsShopping => _isShopping;
     private readonly List<IngredientData> _purchasableIngredients = new List<IngredientData>();
+    private readonly HashSet<string> _scannedNames = new HashSet<string>();
+
+    private sealed class MarketCardView
+    {
+        public GameObject card;
+        public Button button;
+        public Image cardImg;
+        public Outline cardOutline;
+        public Image iconImg;
+        public TMP_Text nameTmp;
+        public TMP_Text priceTmp;
+        public Image buyImg;
+        public Outline buyOutline;
+        public TMP_Text buyTmp;
+        public IngredientData currentIngredient;
+    }
+
+    private sealed class InventoryCardView
+    {
+        public GameObject card;
+        public Image cardImg;
+        public Outline cardOutline;
+        public Image accentImg;
+        public Image iconImg;
+        public TMP_Text nameTmp;
+        public TMP_Text typeTmp;
+        public TMP_Text cntTmp;
+    }
+
+    private readonly List<MarketCardView> _marketCardPool = new List<MarketCardView>();
+    private readonly List<InventoryCardView> _inventoryCardPool = new List<InventoryCardView>();
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Palette
@@ -68,11 +99,12 @@ public class ShopUI : MonoBehaviour
     private void ScanForIngredients()
     {
         _purchasableIngredients.Clear();
+        _scannedNames.Clear();
 
         void TryAdd(IngredientData ing)
         {
             if (ing == null || !ing.IsSafe) return;
-            if (!_purchasableIngredients.Exists(x => x.ingredientName == ing.ingredientName))
+            if (_scannedNames.Add(ing.ingredientName))
             {
                 _purchasableIngredients.Add(ing);
             }
@@ -146,6 +178,14 @@ public class ShopUI : MonoBehaviour
 
         _root.SetActive(true);
         RefreshUI();
+
+        // Perform layout rebuild once upon opening
+        Canvas.ForceUpdateCanvases();
+        if (_marketGrid is RectTransform marketRT)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(marketRT);
+        if (_inventoryGrid is RectTransform invRT)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(invRT);
+
         yield return AnimateShop(true);
 
         yield return new WaitForSecondsRealtime(0.08f);
@@ -227,56 +267,78 @@ public class ShopUI : MonoBehaviour
             Hex("2A3136FF")
         );
 
-        for (int i = _marketGrid.childCount - 1; i >= 0; i--)
+        int cost = PlayerEconomy.Instance.freshIngredientCostPerUnit;
+
+        // 1. Update Market Cards from pool
+        for (int i = 0; i < _purchasableIngredients.Count; i++)
         {
-            Transform child = _marketGrid.GetChild(i);
-            child.SetParent(null);
-            Destroy(child.gameObject);
+            MarketCardView view;
+            if (i < _marketCardPool.Count)
+            {
+                view = _marketCardPool[i];
+            }
+            else
+            {
+                view = CreateMarketCardView();
+                _marketCardPool.Add(view);
+            }
+            BindMarketCard(view, _purchasableIngredients[i], cost);
         }
 
-        int cost = PlayerEconomy.Instance.freshIngredientCostPerUnit;
-        foreach (var ing in _purchasableIngredients)
-            CreateMarketItem(ing, cost);
+        // Deactivate unused market cards
+        for (int i = _purchasableIngredients.Count; i < _marketCardPool.Count; i++)
+        {
+            if (_marketCardPool[i].card != null)
+                _marketCardPool[i].card.SetActive(false);
+        }
 
         if (_emptyMarketLabel != null)
             _emptyMarketLabel.gameObject.SetActive(_purchasableIngredients.Count == 0);
 
-        for (int i = _inventoryGrid.childCount - 1; i >= 0; i--)
+        // 2. Update Inventory Cards from pool
+        int invIdx = 0;
+        if (PlayerEconomy.Instance.inventory != null)
         {
-            Transform child = _inventoryGrid.GetChild(i);
-            child.SetParent(null);
-            Destroy(child.gameObject);
+            foreach (var stack in PlayerEconomy.Instance.inventory)
+            {
+                if (stack == null || stack.ingredient == null || stack.amount <= 0) continue;
+
+                InventoryCardView view;
+                if (invIdx < _inventoryCardPool.Count)
+                {
+                    view = _inventoryCardPool[invIdx];
+                }
+                else
+                {
+                    view = CreateInventoryCardView();
+                    _inventoryCardPool.Add(view);
+                }
+                BindInventoryCard(view, stack.ingredient, stack.amount);
+                invIdx++;
+            }
         }
 
-        bool anyInventory = false;
-        foreach (var stack in PlayerEconomy.Instance.inventory)
+        // Deactivate unused inventory cards
+        for (int i = invIdx; i < _inventoryCardPool.Count; i++)
         {
-            if (stack == null || stack.ingredient == null || stack.amount <= 0) continue;
-
-            CreateInventoryItem(stack.ingredient, stack.amount);
-            anyInventory = true;
+            if (_inventoryCardPool[i].card != null)
+                _inventoryCardPool[i].card.SetActive(false);
         }
 
         if (_emptyInventoryLabel != null)
-            _emptyInventoryLabel.gameObject.SetActive(!anyInventory);
-
-        Canvas.ForceUpdateCanvases();
-        if (_marketGrid is RectTransform marketRT)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(marketRT);
-        if (_inventoryGrid is RectTransform invRT)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(invRT);
+            _emptyInventoryLabel.gameObject.SetActive(invIdx == 0);
     }
 
-    private void CreateMarketItem(IngredientData ingredient, int cost)
+    private MarketCardView CreateMarketCardView()
     {
-        bool canAfford = PlayerEconomy.Instance != null && PlayerEconomy.Instance.Money >= cost;
+        MarketCardView view = new MarketCardView();
 
-        GameObject card = CreateRect("MarketCard_" + ingredient.ingredientName, _marketGrid,
-            Vector2.zero, Vector2.one);
+        GameObject card = CreateRect("MarketCard", _marketGrid, Vector2.zero, Vector2.one);
+        view.card = card;
 
-        Image cardImg = card.AddComponent<Image>();
-        cardImg.color = Color.white;
-        AddOutline(cardImg, BorderSoft, new Vector2(1f, -1f));
+        view.cardImg = card.AddComponent<Image>();
+        view.cardImg.color = Color.white;
+        view.cardOutline = AddOutline(view.cardImg, BorderSoft, new Vector2(1f, -1f));
 
         LayoutElement le = card.AddComponent<LayoutElement>();
         le.minHeight = 82f;
@@ -286,12 +348,15 @@ public class ShopUI : MonoBehaviour
         RectTransform cardRT = card.GetComponent<RectTransform>();
         cardRT.sizeDelta = new Vector2(0f, 82f);
 
-        Button btn = card.AddComponent<Button>();
-        btn.targetGraphic = cardImg;
-        btn.interactable = canAfford;
-        btn.onClick.AddListener(() => BuyIngredient(ingredient));
+        view.button = card.AddComponent<Button>();
+        view.button.targetGraphic = view.cardImg;
+        view.button.onClick.AddListener(() =>
+        {
+            if (view.currentIngredient != null)
+                BuyIngredient(view.currentIngredient);
+        });
         ConfigureButtonColors(
-            btn,
+            view.button,
             CardBg,
             CardHover,
             CardPressed,
@@ -308,23 +373,14 @@ public class ShopUI : MonoBehaviour
 
         GameObject iconGo = CreateRect("Icon", iconTile.transform,
             new Vector2(0.12f, 0.12f), new Vector2(0.88f, 0.88f));
-        Image iconImg = iconGo.AddComponent<Image>();
-        iconImg.preserveAspect = true;
-        iconImg.raycastTarget = false;
-        if (ingredient.sprite != null)
-        {
-            iconImg.sprite = ingredient.sprite;
-            iconImg.color = Color.white;
-        }
-        else
-        {
-            iconImg.color = Hex("45535BFF");
-        }
+        view.iconImg = iconGo.AddComponent<Image>();
+        view.iconImg.preserveAspect = true;
+        view.iconImg.raycastTarget = false;
 
-        TMP_Text nameTmp = CreateText(
+        view.nameTmp = CreateText(
             "Name",
             card.transform,
-            ingredient.ingredientName,
+            "",
             17f,
             TextMain,
             TextAlignmentOptions.Left,
@@ -332,9 +388,9 @@ public class ShopUI : MonoBehaviour
             new Vector2(0.62f, 0.84f),
             true
         );
-        nameTmp.enableAutoSizing = true;
-        nameTmp.fontSizeMin = 12f;
-        nameTmp.fontSizeMax = 17f;
+        view.nameTmp.enableAutoSizing = true;
+        view.nameTmp.fontSizeMin = 12f;
+        view.nameTmp.fontSizeMax = 17f;
 
         TMP_Text freshTmp = CreateText(
             "FreshBadgeText",
@@ -349,53 +405,85 @@ public class ShopUI : MonoBehaviour
         );
         freshTmp.characterSpacing = 2f;
 
-        TMP_Text priceTmp = CreateText(
+        view.priceTmp = CreateText(
             "Price",
             card.transform,
-            $"${cost}",
+            "",
             20f,
-            canAfford ? Gold : Red,
+            Gold,
             TextAlignmentOptions.Right,
             new Vector2(0.61f, 0.16f),
             new Vector2(0.76f, 0.84f),
             true
         );
+        view.priceTmp.raycastTarget = false;
 
-        // Buy button-looking badge. The whole card is clickable.
         GameObject buyGo = CreateRect("BuyBadge", card.transform,
             new Vector2(0.79f, 0.22f), new Vector2(0.965f, 0.78f));
-        Image buyImg = buyGo.AddComponent<Image>();
-        buyImg.color = canAfford ? GreenDark : Hex("39444AFF");
-        buyImg.raycastTarget = false;
-        AddOutline(buyImg, canAfford ? Hex("4FE6A4AA") : Hex("56616899"), new Vector2(1f, -1f));
+        view.buyImg = buyGo.AddComponent<Image>();
+        view.buyImg.raycastTarget = false;
+        view.buyOutline = AddOutline(view.buyImg, Hex("4FE6A4AA"), new Vector2(1f, -1f));
 
-        TMP_Text buyTmp = CreateText(
+        view.buyTmp = CreateText(
             "Txt",
             buyGo.transform,
-            canAfford ? "BUY" : "LOCKED",
-            canAfford ? 13f : 10f,
-            canAfford ? Color.white : TextMuted,
+            "BUY",
+            13f,
+            Color.white,
             TextAlignmentOptions.Center,
             Vector2.zero,
             Vector2.one,
             true
         );
-        buyTmp.characterSpacing = canAfford ? 1f : 0f;
 
-        priceTmp.raycastTarget = false;
+        return view;
     }
 
-    private void CreateInventoryItem(IngredientData ingredient, int count)
+    private void BindMarketCard(MarketCardView view, IngredientData ingredient, int cost)
     {
-        Color stateColor = ingredient.IsSafe ? Green : Red;
+        view.currentIngredient = ingredient;
+        bool canAfford = PlayerEconomy.Instance != null && PlayerEconomy.Instance.Money >= cost;
 
-        GameObject card = CreateRect("InvCard_" + ingredient.ingredientName, _inventoryGrid,
-            Vector2.zero, Vector2.one);
+        view.card.name = "MarketCard_" + ingredient.ingredientName;
+        view.nameTmp.text = ingredient.ingredientName;
 
-        Image cardImg = card.AddComponent<Image>();
-        cardImg.color = ingredient.IsSafe ? Hex("172821FF") : Hex("2B1B1DFF");
-        cardImg.raycastTarget = false;
-        AddOutline(cardImg, ingredient.IsSafe ? Hex("2A5C45FF") : Hex("613A3AFF"), new Vector2(1f, -1f));
+        if (ingredient.sprite != null)
+        {
+            view.iconImg.sprite = ingredient.sprite;
+            view.iconImg.color = Color.white;
+        }
+        else
+        {
+            view.iconImg.sprite = null;
+            view.iconImg.color = Hex("45535BFF");
+        }
+
+        view.priceTmp.text = $"${cost}";
+        view.priceTmp.color = canAfford ? Gold : Red;
+
+        view.button.interactable = canAfford;
+        view.buyImg.color = canAfford ? GreenDark : Hex("39444AFF");
+        if (view.buyOutline != null)
+            view.buyOutline.effectColor = canAfford ? Hex("4FE6A4AA") : Hex("56616899");
+
+        view.buyTmp.text = canAfford ? "BUY" : "LOCKED";
+        view.buyTmp.fontSize = canAfford ? 13f : 10f;
+        view.buyTmp.color = canAfford ? Color.white : TextMuted;
+        view.buyTmp.characterSpacing = canAfford ? 1f : 0f;
+
+        view.card.SetActive(true);
+    }
+
+    private InventoryCardView CreateInventoryCardView()
+    {
+        InventoryCardView view = new InventoryCardView();
+
+        GameObject card = CreateRect("InvCard", _inventoryGrid, Vector2.zero, Vector2.one);
+        view.card = card;
+
+        view.cardImg = card.AddComponent<Image>();
+        view.cardImg.raycastTarget = false;
+        view.cardOutline = AddOutline(view.cardImg, Hex("2A5C45FF"), new Vector2(1f, -1f));
 
         LayoutElement le = card.AddComponent<LayoutElement>();
         le.minHeight = 64f;
@@ -408,9 +496,8 @@ public class ShopUI : MonoBehaviour
         // Small state accent
         GameObject accent = CreateRect("Accent", card.transform,
             new Vector2(0f, 0f), new Vector2(0.012f, 1f));
-        Image accentImg = accent.AddComponent<Image>();
-        accentImg.color = stateColor;
-        accentImg.raycastTarget = false;
+        view.accentImg = accent.AddComponent<Image>();
+        view.accentImg.raycastTarget = false;
 
         GameObject iconTile = CreateRect("IconTile", card.transform,
             new Vector2(0.035f, 0.16f), new Vector2(0.18f, 0.84f));
@@ -420,23 +507,14 @@ public class ShopUI : MonoBehaviour
 
         GameObject iconGo = CreateRect("Icon", iconTile.transform,
             new Vector2(0.12f, 0.12f), new Vector2(0.88f, 0.88f));
-        Image iconImg = iconGo.AddComponent<Image>();
-        iconImg.preserveAspect = true;
-        iconImg.raycastTarget = false;
-        if (ingredient.sprite != null)
-        {
-            iconImg.sprite = ingredient.sprite;
-            iconImg.color = Color.white;
-        }
-        else
-        {
-            iconImg.color = Hex("45535BFF");
-        }
+        view.iconImg = iconGo.AddComponent<Image>();
+        view.iconImg.preserveAspect = true;
+        view.iconImg.raycastTarget = false;
 
-        TMP_Text nameTmp = CreateText(
+        view.nameTmp = CreateText(
             "Name",
             card.transform,
-            ingredient.ingredientName,
+            "",
             15f,
             TextMain,
             TextAlignmentOptions.Left,
@@ -444,22 +522,22 @@ public class ShopUI : MonoBehaviour
             new Vector2(0.72f, 0.86f),
             true
         );
-        nameTmp.enableAutoSizing = true;
-        nameTmp.fontSizeMin = 11f;
-        nameTmp.fontSizeMax = 15f;
+        view.nameTmp.enableAutoSizing = true;
+        view.nameTmp.fontSizeMin = 11f;
+        view.nameTmp.fontSizeMax = 15f;
 
-        TMP_Text typeTmp = CreateText(
+        view.typeTmp = CreateText(
             "Type",
             card.transform,
-            ingredient.IsSafe ? "FRESH" : "SPOILED",
+            "",
             10f,
-            stateColor,
+            Green,
             TextAlignmentOptions.Left,
             new Vector2(0.215f, 0.13f),
             new Vector2(0.55f, 0.47f),
             true
         );
-        typeTmp.characterSpacing = 1.5f;
+        view.typeTmp.characterSpacing = 1.5f;
 
         GameObject badgeGo = CreateRect("Badge", card.transform,
             new Vector2(0.79f, 0.22f), new Vector2(0.955f, 0.78f));
@@ -468,10 +546,10 @@ public class ShopUI : MonoBehaviour
         badgeImg.raycastTarget = false;
         AddOutline(badgeImg, Border, new Vector2(1f, -1f));
 
-        TMP_Text cntTmp = CreateText(
+        view.cntTmp = CreateText(
             "Cnt",
             badgeGo.transform,
-            $"x{count}",
+            "",
             14f,
             TextMain,
             TextAlignmentOptions.Center,
@@ -479,6 +557,38 @@ public class ShopUI : MonoBehaviour
             Vector2.one,
             true
         );
+
+        return view;
+    }
+
+    private void BindInventoryCard(InventoryCardView view, IngredientData ingredient, int count)
+    {
+        Color stateColor = ingredient.IsSafe ? Green : Red;
+
+        view.card.name = "InvCard_" + ingredient.ingredientName;
+        view.cardImg.color = ingredient.IsSafe ? Hex("172821FF") : Hex("2B1B1DFF");
+        if (view.cardOutline != null)
+            view.cardOutline.effectColor = ingredient.IsSafe ? Hex("2A5C45FF") : Hex("613A3AFF");
+
+        view.accentImg.color = stateColor;
+
+        if (ingredient.sprite != null)
+        {
+            view.iconImg.sprite = ingredient.sprite;
+            view.iconImg.color = Color.white;
+        }
+        else
+        {
+            view.iconImg.sprite = null;
+            view.iconImg.color = Hex("45535BFF");
+        }
+
+        view.nameTmp.text = ingredient.ingredientName;
+        view.typeTmp.text = ingredient.IsSafe ? "FRESH" : "SPOILED";
+        view.typeTmp.color = stateColor;
+        view.cntTmp.text = $"x{count}";
+
+        view.card.SetActive(true);
     }
 
     private void BuildUI()
@@ -990,12 +1100,13 @@ public class ShopUI : MonoBehaviour
         return go;
     }
 
-    private static void AddOutline(Graphic graphic, Color color, Vector2 distance)
+    private static Outline AddOutline(Graphic graphic, Color color, Vector2 distance)
     {
         Outline outline = graphic.gameObject.AddComponent<Outline>();
         outline.effectColor = color;
         outline.effectDistance = distance;
         outline.useGraphicAlpha = true;
+        return outline;
     }
 
     private static void ConfigureButtonColors(

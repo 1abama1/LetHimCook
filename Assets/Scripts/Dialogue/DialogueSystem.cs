@@ -99,18 +99,33 @@ public class DialogueSystem : MonoBehaviour
             ProceedToChoices();
     }
 
+    private readonly List<DialogueChoice> _validChoices = new List<DialogueChoice>();
+
     void ProceedToChoices()
     {
-        var valid = _currentNode.choices?.FindAll(
-            c => c != null && !string.IsNullOrWhiteSpace(c.buttonLabel));
+        UpdateValidChoices();
 
-        if (valid == null || valid.Count == 0)
+        if (_validChoices.Count == 0)
         {
             EndDialogue();
             return;
         }
 
-        onShowChoices?.Invoke(valid);
+        onShowChoices?.Invoke(_validChoices);
+    }
+
+    private void UpdateValidChoices()
+    {
+        _validChoices.Clear();
+        if (_currentNode?.choices != null)
+        {
+            for (int i = 0; i < _currentNode.choices.Count; i++)
+            {
+                var c = _currentNode.choices[i];
+                if (c != null && !string.IsNullOrWhiteSpace(c.buttonLabel))
+                    _validChoices.Add(c);
+            }
+        }
     }
 
     public void SelectChoice(int index)
@@ -122,17 +137,14 @@ public class DialogueSystem : MonoBehaviour
             return;
         }
 
-        var valid = _currentNode.choices?.FindAll(
-            c => c != null && !string.IsNullOrWhiteSpace(c.buttonLabel));
-
-        if (valid == null || index >= valid.Count) 
+        if (index < 0 || index >= _validChoices.Count) 
         { 
             Debug.Log($"[DialogueSystem] Valid choices is null or index {index} out of bounds. Ending dialogue.");
             EndDialogue(); 
             return; 
         }
 
-        DialogueChoice choice = valid[index];
+        DialogueChoice choice = _validChoices[index];
         Debug.Log($"[DialogueSystem] Choice selected: {choice.buttonLabel}, NextNode: {choice.nextDialogueId}");
 
         if (!string.IsNullOrEmpty(choice.callbackMethod) && _currentNPC != null)
@@ -168,6 +180,7 @@ public class DialogueSystem : MonoBehaviour
         if (_currentPlayer != null) _currentPlayer.SetDialogueLock(false);
         _currentNPC  = null;
         _currentNode = null;
+        _validChoices.Clear();
         onDialogueEnd?.Invoke();
     }
 

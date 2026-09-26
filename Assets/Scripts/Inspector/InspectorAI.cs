@@ -111,7 +111,8 @@ public class InspectorAI : MonoBehaviour
         if (dir.sqrMagnitude > 0.01f) transform.forward = dir.normalized;
         transform.position = Vector3.MoveTowards(transform.position, target.position, roamSpeed * Time.deltaTime);
 
-        if (Vector3.Distance(transform.position, target.position) < 0.2f)
+        Vector3 toTarget = transform.position - target.position;
+        if (toTarget.sqrMagnitude < 0.2f * 0.2f)
             StartCoroutine(WaitAndMoveNext());
     }
 
@@ -142,8 +143,14 @@ public class InspectorAI : MonoBehaviour
     {
         if (station == null) return false;
         Vector3 toStation = station.transform.position - transform.position;
-        if (toStation.magnitude > visionRange) return false;
-        return Vector3.Angle(transform.forward, toStation) <= visionAngle;
+        float distSq = toStation.sqrMagnitude;
+        if (distSq > visionRange * visionRange) return false;
+
+        float dot = Vector3.Dot(transform.forward, toStation);
+        if (dot <= 0f) return false;
+
+        float cos = Mathf.Cos(visionAngle * Mathf.Deg2Rad);
+        return dot * dot >= distSq * cos * cos;
     }
 
     public void AddSuspicion(float amount)

@@ -7319,7 +7319,7 @@ MonoBehaviour:
   playerEconomy: {fileID: 320077705}
   currentPhase: 0
   dayDurationSeconds: 250
-  nightDurationSeconds: 3
+  nightDurationSeconds: 90
   daySpawnPosition: {x: 50.55, y: 0.49183, z: -47.63}
   daySpawnRotation: {x: 0, y: 0, z: 0}
   nightSpawnPosition: {x: 36.678, y: 0.88983, z: -47.76}

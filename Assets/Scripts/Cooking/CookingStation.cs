@@ -34,6 +34,10 @@ public class CookingStation : MonoBehaviour, IInteractable
 
     private GameObject _currentVisual;
 
+    private static MaterialPropertyBlock _propBlock;
+    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+    private static readonly int ColorId = Shader.PropertyToID("_Color");
+
     private float _timer;
     private float _duration;
     private bool  _ingredientHidden;
@@ -218,8 +222,14 @@ public class CookingStation : MonoBehaviour, IInteractable
 
                 if (CurrentIngredient.tintColor != Color.white)
                 {
+                    if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
                     foreach (var r in _currentVisual.GetComponentsInChildren<Renderer>())
-                        r.material.color = CurrentIngredient.tintColor;
+                    {
+                        r.GetPropertyBlock(_propBlock);
+                        _propBlock.SetColor(BaseColorId, CurrentIngredient.tintColor);
+                        _propBlock.SetColor(ColorId, CurrentIngredient.tintColor);
+                        r.SetPropertyBlock(_propBlock);
+                    }
                 }
             }
         }

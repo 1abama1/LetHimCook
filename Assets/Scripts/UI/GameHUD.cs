@@ -50,7 +50,9 @@ public class GameHUD : MonoBehaviour
 
     private MurderSystem         _murderSystem;
     private FlashlightController _flashlight;
-    private List<Button>         _choiceButtons = new List<Button>();
+    private readonly List<Button> _choiceButtons = new List<Button>();
+    private readonly List<Button> _choiceButtonPool = new List<Button>();
+    private readonly WaitForSeconds _typingWait = new WaitForSeconds(0.035f);
     private int                  _advanceCooldownFrames;
     private int                  _lastSecond = -1;
     private GamePhase            _lastPhase = (GamePhase)(-1);
@@ -339,38 +341,35 @@ public class GameHUD : MonoBehaviour
     System.Collections.IEnumerator TypewriterEffect(DialogueLine line)
     {
         _isTyping = true;
-        _currentFullText = line.text;
+        _currentFullText = line.text ?? string.Empty;
         if (dialogueBodyText != null)
         {
             dialogueBodyText.text = _currentFullText;
             dialogueBodyText.maxVisibleCharacters = 0;
         }
 
-        float typingSpeed = 0.035f;
-        int charsToPlaySound = 2;
+        const int charsPerBlip = 2;
 
         for (int i = 0; i <= _currentFullText.Length; i++)
         {
             if (dialogueBodyText != null)
                 dialogueBodyText.maxVisibleCharacters = i;
 
-            if (line.voiceClip != null && i % charsToPlaySound == 0 && i < _currentFullText.Length)
+            if (line.voiceClip != null && i < _currentFullText.Length && i % charsPerBlip == 0)
             {
-                if (_currentFullText[i] != ' ' && _currentFullText[i] != '\n')
+                char c = _currentFullText[i];
+                if (c != ' ' && c != '\n')
                 {
-                    GameObject go = new GameObject("VoiceBlip");
-                    AudioSource src = go.AddComponent<AudioSource>();
-                    src.clip = line.voiceClip;
-                    src.pitch = Random.Range(0.85f, 1.15f);
-                    src.volume = 0.6f;
-                    src.Play();
-                    Destroy(go, line.voiceClip.length + 0.1f);
+                    AudioManager.Instance?.PlayClip2D(
+                        line.voiceClip, 0.6f, Random.Range(0.85f, 1.15f)
+                    );
                 }
             }
 
-            yield return new WaitForSeconds(typingSpeed);
+            yield return _typingWait;
         }
         _isTyping = false;
+        _typewriterRoutine = null;
     }
 
     void ShowChoices(List<DialogueChoice> choices)
@@ -386,7 +385,20 @@ public class GameHUD : MonoBehaviour
         for (int i = 0; i < choices.Count; i++)
         {
             int idx = i;
-            Button btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
+            Button btn;
+            if (i < _choiceButtonPool.Count && _choiceButtonPool[i] != null)
+            {
+                btn = _choiceButtonPool[i];
+            }
+            else
+            {
+                btn = Instantiate(choiceButtonPrefab, choiceButtonContainer);
+                if (i < _choiceButtonPool.Count)
+                    _choiceButtonPool[i] = btn;
+                else
+                    _choiceButtonPool.Add(btn);
+            }
+
             btn.gameObject.SetActive(true);
 
             TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
@@ -400,8 +412,16 @@ public class GameHUD : MonoBehaviour
                 label.fontSize         = 18f;
             }
 
+            btn.onClick.RemoveAllListeners();
             btn.onClick.AddListener(() => DialogueSystem.Instance?.SelectChoice(idx));
             _choiceButtons.Add(btn);
+        }
+
+        // Deactivate excess pooled buttons
+        for (int i = choices.Count; i < _choiceButtonPool.Count; i++)
+        {
+            if (_choiceButtonPool[i] != null)
+                _choiceButtonPool[i].gameObject.SetActive(false);
         }
 
         if (_choiceButtons.Count > 0 && UnityEngine.EventSystems.EventSystem.current != null)
@@ -420,25 +440,12 @@ public class GameHUD : MonoBehaviour
 
     void ClearChoiceButtons()
     {
-        foreach (var btn in _choiceButtons)
+        for (int i = 0; i < _choiceButtonPool.Count; i++)
         {
-            if (btn != null) 
-            {
-                btn.transform.SetParent(null);
-                Destroy(btn.gameObject);
-            }
+            if (_choiceButtonPool[i] != null)
+                _choiceButtonPool[i].gameObject.SetActive(false);
         }
         _choiceButtons.Clear();
-
-        if (choiceButtonContainer != null)
-        {
-            for (int i = choiceButtonContainer.childCount - 1; i >= 0; i--)
-            {
-                Transform child = choiceButtonContainer.GetChild(i);
-                child.SetParent(null);
-                Destroy(child.gameObject);
-            }
-        }
     }
 
     public void OnBribeButtonPressed() => FindFirstObjectByType<InspectorAI>()?.TryBribe();

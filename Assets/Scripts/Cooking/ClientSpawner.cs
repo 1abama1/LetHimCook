@@ -28,6 +28,7 @@ public class ClientSpawner : MonoBehaviour
     private readonly List<ClientNPC> _queue = new List<ClientNPC>();
 
     private float _spawnTimer;
+    private float _cleanupTimer = 1.5f;
     private bool _isDayPhase;
 
     // ──────────────────────────────────────────────────────────────
@@ -46,11 +47,13 @@ public class ClientSpawner : MonoBehaviour
     {
         if (!_isDayPhase) return;
 
-        // Чистим уничтоженных клиентов (ушли злые или Destroy после подачи)
-        int before = _queue.Count;
-        _queue.RemoveAll(c => c == null);
-        if (_queue.Count != before)
-            RefreshQueuePositions();
+        // Редкая проверка на случай неожиданного уничтожения клиентов (раз в 1.5 сек без аллокаций)
+        _cleanupTimer -= Time.deltaTime;
+        if (_cleanupTimer <= 0f)
+        {
+            _cleanupTimer = 1.5f;
+            CleanDeadClients();
+        }
 
         if (_queue.Count >= maxClients) return;
 
@@ -60,6 +63,21 @@ public class ClientSpawner : MonoBehaviour
             SpawnClient();
             _spawnTimer = spawnInterval;
         }
+    }
+
+    private void CleanDeadClients()
+    {
+        bool changed = false;
+        for (int i = _queue.Count - 1; i >= 0; i--)
+        {
+            if (_queue[i] == null)
+            {
+                _queue.RemoveAt(i);
+                changed = true;
+            }
+        }
+        if (changed)
+            RefreshQueuePositions();
     }
 
     // ──────────────────────────────────────────────────────────────

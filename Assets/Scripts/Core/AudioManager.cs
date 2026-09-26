@@ -222,6 +222,26 @@ public sealed class AudioManager : MonoBehaviour
     // Public SFX API
     // ─────────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Plays an arbitrary AudioClip as a 2D one-shot using the pooled SFX sources.
+    /// Eliminates runtime GameObject/AudioSource allocations.
+    /// </summary>
+    public void PlayClip2D(AudioClip clip, float volume = 1f, float pitch = 1f)
+    {
+        if (clip == null) return;
+
+        AudioSource source = GetAvailableSource(forLoop: false);
+        ResetSource(source);
+
+        source.clip         = clip;
+        source.volume       = volume;
+        source.pitch        = pitch;
+        source.spatialBlend = 0f;
+        source.loop         = false;
+
+        source.Play();
+    }
+
     /// <summary>Plays a non-spatial (2D) one-shot SFX.</summary>
     public void Play(string key)
     {
