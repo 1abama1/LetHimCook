@@ -24,6 +24,13 @@ public class PlayerController : MonoBehaviour
     private Coroutine  _freezeCoroutine;
     private Collider[] _interactHits = new Collider[10];
 
+    // Кешированные хэши параметров Animator — исключают string lookup каждый кадр.
+    private static readonly int SpeedHash    = Animator.StringToHash("Speed");
+    private static readonly int SneakingHash = Animator.StringToHash("IsSneaking");
+    private static readonly int HidingHash   = Animator.StringToHash("IsHiding");
+    private static readonly int CarryingHash = Animator.StringToHash("IsCarrying");
+
+
     private IngredientData _heldIngredient;
     public  IngredientData HeldIngredient => _heldIngredient;
 
@@ -133,7 +140,7 @@ public class PlayerController : MonoBehaviour
     {
         _moveInput = Vector3.zero;
         if (_rb != null) _rb.linearVelocity = Vector3.zero;
-        if (_animator != null) _animator.SetFloat("Speed", 0f);
+        if (_animator != null) _animator.SetFloat(SpeedHash, 0f);
     }
 
     public void SetDialogueLock(bool locked)
@@ -151,10 +158,10 @@ public class PlayerController : MonoBehaviour
     void UpdateAnimator()
     {
         if (_animator == null) return;
-        _animator.SetFloat("Speed",      _moveInput.magnitude);
-        _animator.SetBool("IsSneaking",  _isSneaking);
-        _animator.SetBool("IsHiding",    _isHiding);
-        _animator.SetBool("IsCarrying",  HeldIngredient != null || HeldPlate != null);
+        _animator.SetFloat(SpeedHash,    _moveInput.magnitude);
+        _animator.SetBool(SneakingHash,  _isSneaking);
+        _animator.SetBool(HidingHash,    _isHiding);
+        _animator.SetBool(CarryingHash,  HeldIngredient != null || HeldPlate != null);
     }
 
     public void TryInteract()

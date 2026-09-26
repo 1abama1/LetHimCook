@@ -163,7 +163,7 @@ public class RecipeBookUI : MonoBehaviour
         _recipesContent.fontSize = 22f;
         _recipesContent.color = new Color(0.15f, 0.15f, 0.15f); // Темный текст для "бумаги"
         _recipesContent.alignment = TextAlignmentOptions.TopLeft;
-        _recipesContent.enableWordWrapping = true;
+        _recipesContent.textWrappingMode = TextWrappingModes.Normal;
         var tRt = textGo.GetComponent<RectTransform>();
         tRt.anchorMin = Vector2.zero;
         tRt.anchorMax = Vector2.one;

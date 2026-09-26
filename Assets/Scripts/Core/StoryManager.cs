@@ -54,8 +54,16 @@ public class StoryManager : MonoBehaviour
         BuildProgrammaticUI();
     }
 
+    // Кеш экономики для event-driven обновления HUD.
+    private PlayerEconomy _economy;
+
     void Start()
     {
+        _economy = PlayerEconomy.Instance;
+
+        if (_economy != null)
+            _economy.onMoneyChanged.AddListener(OnMoneyChanged);
+
         // Автоматическое создание RecipeBookUI, если его нет
         if (RecipeBookUI.Instance == null)
         {
@@ -69,7 +77,7 @@ public class StoryManager : MonoBehaviour
             // День начинается: инкрементируем счетчик дней
             GameManager.Instance.onDayBegin.AddListener(() =>
             {
-                if (!_gameEnded) _currentDay++;
+                if (!_gameEnded) { _currentDay++; RefreshDebtHud(); }
             });
 
             // День ЗАКОНЧИЛСЯ (начинается ночь): именно здесь показываем итоги дня!
@@ -79,13 +87,27 @@ public class StoryManager : MonoBehaviour
         StartCoroutine(RunBackstory());
     }
 
-    void Update()
+    void OnDestroy()
     {
-        if (_debtHudLabel != null && _currentDay > 0)
-        {
-            int currentMoney = PlayerEconomy.Instance?.Money ?? 0;
-            _debtHudLabel.text = $"DAY {_currentDay}/{totalDays} | ${currentMoney} / ${totalDebt}";
-        }
+        if (_economy != null)
+            _economy.onMoneyChanged.RemoveListener(OnMoneyChanged);
+    }
+
+    private void OnMoneyChanged(int _) => RefreshDebtHud();
+
+    /// <summary>
+    /// Обновляет HUD долга без GC-аллокации строк.
+    /// Использует TMP SetText с форматными аргументами (zero-alloc перегрузка).
+    /// </summary>
+    private void RefreshDebtHud()
+    {
+        if (_debtHudLabel == null || _currentDay <= 0) return;
+
+        int money = _economy != null ? _economy.Money : 0;
+
+        // TMP SetText(format, arg0..3) не аллоцирует managed string.
+        _debtHudLabel.SetText("DAY {0}/{1} | ${2} / ${3}",
+            _currentDay, totalDays, money, totalDebt);
     }
 
     // ── Поток предыстории ─────────────────────────────────────────────────────
@@ -256,7 +278,7 @@ public class StoryManager : MonoBehaviour
         ApplyFont(_storyLabel);
         _storyLabel.alignment = TextAlignmentOptions.Center;
         _storyLabel.fontSize = 28f;
-        _storyLabel.enableWordWrapping = true;
+        _storyLabel.textWrappingMode = TextWrappingModes.Normal;
         Stretch(storyGO.GetComponent<RectTransform>(), 100f);
 
         _summaryPanel = new GameObject("SummaryPanel", typeof(RectTransform));

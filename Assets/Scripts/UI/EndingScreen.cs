@@ -264,7 +264,7 @@ public class EndingScreen : MonoBehaviour
         tmp.fontStyle            = style;
         tmp.color                = color;
         tmp.alignment            = TextAlignmentOptions.Center;
-        tmp.enableWordWrapping   = true;
+        tmp.textWrappingMode     = TextWrappingModes.Normal;
         tmp.characterSpacing     = style == FontStyles.Bold ? 8f : 2f;
         return tmp;
     }

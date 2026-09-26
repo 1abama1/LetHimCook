@@ -300,8 +300,9 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Корутина телепорта: ждёт кадр после отключения CharacterController,
-    /// иначе CC может проигнорировать изменение позиции в том же кадре.
+    /// Корутина телепорта через Rigidbody — сбрасывает velocity и
+    /// устанавливает позицию/ротацию через rb.position / rb.rotation.
+    /// Fallback (без Rigidbody) через Transform.SetPositionAndRotation.
     /// </summary>
     private IEnumerator TeleportPlayerCoroutine(GamePhase phase)
     {
@@ -317,23 +318,27 @@ public class GameManager : MonoBehaviour
             ? Quaternion.Euler(daySpawnRotation)
             : Quaternion.Euler(nightSpawnRotation);
 
-        CharacterController cc = playerTransform.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
+        yield return new WaitForFixedUpdate(); // убеждаемся, что FixedUpdate этого кадра завершён
 
-        // Даём Unity время понять, что CC выключен
-        yield return new WaitForSecondsRealtime(0.1f);
+        if (playerTransform.TryGetComponent(out Rigidbody rb))
+        {
+            rb.linearVelocity  = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.position        = targetPos;
+            rb.rotation        = targetRot;
+        }
+        else
+        {
+            playerTransform.SetPositionAndRotation(targetPos, targetRot);
+        }
 
-        playerTransform.position = targetPos;
-        playerTransform.rotation = targetRot;
+        Physics.SyncTransforms();
+        yield return null; // даём физике зафиксировать новую позицию
 
-        Physics.SyncTransforms(); // Форсируем обновление физики
-        yield return null; // кадр 2: позиция зафиксирована
-
-        if (cc != null) cc.enabled = true;
         Debug.Log($"[GameManager] Игрок телепортирован (Coroutine) в {targetPos}");
     }
 
-    /// <summary>Синхронная версия для Start() (без анимации).</summary>
+    /// <summary>Синхронная версия для Start() (без анимации, без coroutine).</summary>
     private void TeleportPlayer(GamePhase phase)
     {
         FindPlayer();
@@ -348,15 +353,19 @@ public class GameManager : MonoBehaviour
             ? Quaternion.Euler(daySpawnRotation)
             : Quaternion.Euler(nightSpawnRotation);
 
-        CharacterController cc = playerTransform.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
-        
-        playerTransform.position = targetPos;
-        playerTransform.rotation = targetRot;
-        
-        Physics.SyncTransforms(); // Форсируем обновление физики
-        
-        if (cc != null) cc.enabled = true;
+        if (playerTransform.TryGetComponent(out Rigidbody rb))
+        {
+            rb.linearVelocity  = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.position        = targetPos;
+            rb.rotation        = targetRot;
+        }
+        else
+        {
+            playerTransform.SetPositionAndRotation(targetPos, targetRot);
+        }
+
+        Physics.SyncTransforms();
         Debug.Log($"[GameManager] Игрок телепортирован (Sync) в {targetPos}");
     }
 

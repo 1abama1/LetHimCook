@@ -149,7 +149,7 @@ public class AutoPauseMenu : MonoBehaviour
         
         CreateText(_settingsPanel.transform, "MUSIC VOLUME", new Vector2(0, 100), 40);
         var musicSlider = CreateSlider(_settingsPanel.transform, new Vector2(0, 50));
-        musicSlider.value = AudioManager.Instance != null ? AudioManager.Instance.musicVolume : 0.5f;
+        musicSlider.value = AudioManager.Instance != null ? AudioManager.Instance.MusicVolume : 0.5f;
         musicSlider.onValueChanged.AddListener(v => {
             if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(v);
         });

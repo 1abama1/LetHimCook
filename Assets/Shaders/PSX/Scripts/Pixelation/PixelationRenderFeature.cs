@@ -16,7 +16,9 @@ namespace PSX
         //ScripstableRendererFeature is an abstract class, you need this method
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
+#pragma warning disable CS0618 // cameraColorTargetHandle — Compatibility Mode API
             pixelationPass.Setup(renderer.cameraColorTargetHandle);
+#pragma warning restore CS0618
             renderer.EnqueuePass(pixelationPass);
         }
     }
@@ -51,6 +53,7 @@ namespace PSX
             this.pixelationMaterial = CoreUtils.CreateEngineMaterial(shader);
         }
     
+        [System.Obsolete("Use the RenderGraph API Execute override instead. This override exists for URP Compatibility Mode only.")]
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             if (this.pixelationMaterial == null)

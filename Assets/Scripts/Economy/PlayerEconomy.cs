@@ -91,12 +91,25 @@ public class PlayerEconomy : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+
+        // Инициализируем данные в Awake — состояние валидно для любого Start(),
+        // вне зависимости от Script Execution Order.
+        _money = startingMoney;
     }
 
     void Start()
     {
-        _money = startingMoney;
+        // Отправляем initial state всем подписчикам, которые успели подписаться в OnEnable/Start.
+        // UI при подписке должен также сам читать текущее состояние (pull-on-subscribe).
+        NotifyInitialState();
+    }
+
+    private void NotifyInitialState()
+    {
         onMoneyChanged?.Invoke(_money);
+        onResourceChanged?.Invoke(ResourceType.FreshIngredient,   FreshIngredients);
+        onResourceChanged?.Invoke(ResourceType.SpoiledIngredient, SpoiledIngredients);
+        onResourceChanged?.Invoke(ResourceType.JunkLoot,          JunkLoot);
         onInventoryChanged?.Invoke();
     }
 

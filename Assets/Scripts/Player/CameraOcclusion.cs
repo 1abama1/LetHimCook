@@ -1,147 +1,247 @@
 using UnityEngine;
 using System.Collections.Generic;
+
+/// <summary>
+/// Прозрачность зданий между камерой и игроком.
+/// Использует SphereCastNonAlloc, renderer/материалы кешируются,
+/// sharedMaterials используется для записи/чтения (без неявных инстансов через getter).
+/// OnDestroy восстанавливает все оригинальные материалы и уничтожает runtime-копии.
+/// </summary>
 public class CameraOcclusion : MonoBehaviour
 {
-    public Transform player;
-    public LayerMask buildingLayer;
-    public float cutoutRadius = 2f;
-    
-    public float fadeSpeed = 3f;
-    public float targetAlpha = 0.2f;
+    [SerializeField] public Transform player;
+    [SerializeField] public LayerMask buildingLayer;
+    [SerializeField] public float cutoutRadius = 2f;
+    [SerializeField] public float fadeSpeed    = 3f;
+    [SerializeField] public float targetAlpha  = 0.2f;
 
-    private Dictionary<Renderer, Material[]> _originalMats = new Dictionary<Renderer, Material[]>();
-    private Dictionary<Renderer, Material[]> _fadeMats = new Dictionary<Renderer, Material[]>();
-    private Dictionary<Renderer, float> _currentAlphas = new Dictionary<Renderer, float>();
-    
-    private HashSet<Renderer> _hiddenThisFrame = new HashSet<Renderer>();
-    private List<Renderer> _toRemove = new List<Renderer>();
+    private const int MaxHits = 32;
 
-    void LateUpdate()
+    // Pre-allocated physics buffer — zero GC в LateUpdate.
+    private readonly RaycastHit[] _hits = new RaycastHit[MaxHits];
+
+    // Collider → Renderer: GetComponent вызывается ровно один раз на коллайдер.
+    private readonly Dictionary<Collider, Renderer> _rendererCache = new();
+
+    // Сохранённые оригинальные sharedMaterials (snapshot при первом входе в occlusion).
+    private readonly Dictionary<Renderer, Material[]> _originalMats = new();
+
+    // Созданные runtime fade-материалы (копии оригинальных, с прозрачностью).
+    private readonly Dictionary<Renderer, Material[]> _fadeMats = new();
+
+    // Текущая alpha каждого окклюдированного renderer.
+    private readonly Dictionary<Renderer, float> _currentAlphas = new();
+
+    // Множество renderer'ов, перекрывших игрока в текущем кадре.
+    private readonly HashSet<Renderer> _hiddenThisFrame = new();
+
+    // Буфер для renderer'ов, которые полностью восстановлены и должны быть удалены.
+    private readonly List<Renderer> _toRestore = new();
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void LateUpdate()
     {
         if (player == null) return;
+
         _hiddenThisFrame.Clear();
 
-        Vector3 targetPos = player.position + Vector3.up * 1f;
-        Vector3 dir = targetPos - transform.position;
-        float dist = dir.magnitude;
+        Vector3 targetPosition = player.position + Vector3.up;
+        Vector3 direction      = targetPosition - transform.position;
+        float   distance       = direction.magnitude;
 
-        RaycastHit[] hits = Physics.SphereCastAll(transform.position, cutoutRadius, dir.normalized, dist, buildingLayer);
+        if (distance <= Mathf.Epsilon) return;
 
-        foreach (var hit in hits)
+        Vector3 normalizedDir = direction / distance;
+
+        int hitCount = Physics.SphereCastNonAlloc(
+            transform.position,
+            cutoutRadius,
+            normalizedDir,
+            _hits,
+            distance,
+            buildingLayer,
+            QueryTriggerInteraction.Ignore
+        );
+
+        for (int i = 0; i < hitCount; i++)
         {
-            Renderer r = hit.collider.GetComponent<Renderer>();
-            if (r != null && hit.normal.y < 0.9f)
+            Collider col = _hits[i].collider;
+
+            if (!_rendererCache.TryGetValue(col, out Renderer renderer))
             {
-                _hiddenThisFrame.Add(r);
-                
-                if (!_originalMats.ContainsKey(r))
-                {
-                    SetupTransparentMaterials(r);
-                }
-                
-                if (r.materials != _fadeMats[r]) r.materials = _fadeMats[r];
-                
-                _currentAlphas[r] = Mathf.MoveTowards(_currentAlphas[r], targetAlpha, Time.deltaTime * fadeSpeed);
-                SetAlpha(r, _currentAlphas[r]);
+                renderer = col.GetComponent<Renderer>();
+                _rendererCache[col] = renderer; // кешируем null тоже, чтобы не повторять GetComponent
             }
+
+            // Пропускаем горизонтальные поверхности (полы) и null-renderer'ы.
+            if (renderer == null || _hits[i].normal.y >= 0.9f)
+                continue;
+
+            _hiddenThisFrame.Add(renderer);
+
+            // Первый вход — делаем snapshot и создаём fade-материалы.
+            if (!_originalMats.ContainsKey(renderer))
+                SetupTransparentMaterials(renderer);
+
+            // Двигаем alpha к targetAlpha.
+            float alpha = Mathf.MoveTowards(
+                _currentAlphas[renderer],
+                targetAlpha,
+                fadeSpeed * Time.deltaTime
+            );
+            _currentAlphas[renderer] = alpha;
+            SetAlpha(renderer, alpha);
         }
 
-        _toRemove.Clear();
-        foreach (var r in _originalMats.Keys)
-        {
-            if (!_hiddenThisFrame.Contains(r))
-            {
-                _currentAlphas[r] = Mathf.MoveTowards(_currentAlphas[r], 1f, Time.deltaTime * fadeSpeed);
-                SetAlpha(r, _currentAlphas[r]);
-                
-                if (_currentAlphas[r] >= 0.99f)
-                {
-                    _toRemove.Add(r);
-                }
-            }
-        }
-
-        foreach (var r in _toRemove)
-        {
-            if (r != null) r.materials = _originalMats[r];
-            _originalMats.Remove(r);
-            if (_fadeMats.ContainsKey(r))
-            {
-                foreach(var m in _fadeMats[r]) if (m != null) Destroy(m);
-            }
-            _fadeMats.Remove(r);
-            _currentAlphas.Remove(r);
-        }
+        RestoreVisibleRenderers();
     }
 
-    void SetupTransparentMaterials(Renderer r)
+    /// <summary>
+    /// Для renderer'ов, которые не перекрывали игрока в этом кадре,
+    /// плавно возвращаем alpha к 1 и при достижении восстанавливаем оригинальные материалы.
+    /// </summary>
+    private void RestoreVisibleRenderers()
     {
-        _originalMats[r] = r.materials;
-        Material[] transMats = new Material[r.materials.Length];
-        
-        Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
-        if (litShader == null) litShader = Shader.Find("Standard");
+        _toRestore.Clear();
 
-        for (int i = 0; i < r.materials.Length; i++)
+        foreach (Renderer renderer in _originalMats.Keys)
         {
-            Material orig = r.materials[i];
-            Texture mainTex = orig.mainTexture;
-            if (mainTex == null)
-            {
-                foreach (string prop in orig.GetTexturePropertyNames())
-                {
-                    Texture t = orig.GetTexture(prop);
-                    if (t != null) { mainTex = t; break; }
-                }
-            }
+            if (_hiddenThisFrame.Contains(renderer))
+                continue;
 
-            Color mainColor = Color.white;
-            if (orig.HasProperty("_BaseColor")) mainColor = orig.GetColor("_BaseColor");
-            else if (orig.HasProperty("_Color")) mainColor = orig.GetColor("_Color");
+            float alpha = Mathf.MoveTowards(
+                _currentAlphas[renderer],
+                1f,
+                fadeSpeed * Time.deltaTime
+            );
+            _currentAlphas[renderer] = alpha;
+            SetAlpha(renderer, alpha);
 
-            Material fadeMat = new Material(litShader);
-            if (mainTex != null)
-            {
-                if (fadeMat.HasProperty("_BaseMap")) fadeMat.SetTexture("_BaseMap", mainTex);
-                if (fadeMat.HasProperty("_MainTex")) fadeMat.SetTexture("_MainTex", mainTex);
-            }
-            if (fadeMat.HasProperty("_BaseColor")) fadeMat.SetColor("_BaseColor", mainColor);
-            if (fadeMat.HasProperty("_Color")) fadeMat.SetColor("_Color", mainColor);
-            
-            fadeMat.SetFloat("_Surface", 1); 
-            fadeMat.SetFloat("_Mode", 3);
-            fadeMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            fadeMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            fadeMat.SetInt("_ZWrite", 0);
-            fadeMat.DisableKeyword("_ALPHATEST_ON");
-            fadeMat.EnableKeyword("_ALPHABLEND_ON");
-            fadeMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-            fadeMat.renderQueue = 3000;
-            
-            transMats[i] = fadeMat;
+            if (alpha >= 0.99f)
+                _toRestore.Add(renderer);
         }
-        
-        _fadeMats[r] = transMats;
-        _currentAlphas[r] = 1f;
+
+        foreach (Renderer renderer in _toRestore)
+            RestoreRenderer(renderer);
     }
 
-    void SetAlpha(Renderer r, float a)
+    /// <summary>
+    /// Снимает snapshot sharedMaterials, создаёт runtime fade-копии и
+    /// назначает их как sharedMaterials (один раз при входе в occlusion).
+    /// </summary>
+    private void SetupTransparentMaterials(Renderer renderer)
     {
-        Material[] mats = _fadeMats[r];
+        // Snapshot оригиналов — только shared, без неявного инстансирования.
+        Material[] originalMaterials = renderer.sharedMaterials;
+        _originalMats[renderer] = originalMaterials;
+
+        Shader litShader = Shader.Find("Universal Render Pipeline/Lit")
+                        ?? Shader.Find("Standard");
+
+        Material[] fadeMaterials = new Material[originalMaterials.Length];
+
+        for (int i = 0; i < originalMaterials.Length; i++)
+        {
+            Material original = originalMaterials[i];
+            if (original == null)
+            {
+                fadeMaterials[i] = null;
+                continue;
+            }
+
+            // Копируем оригинал целиком — сохраняем текстуры и цвет.
+            Material fadeMat = new Material(original);
+
+            // Переключаем шейдер на Lit/Standard для поддержки прозрачности,
+            // если текущий шейдер не поддерживает _Surface/_Mode.
+            if (!fadeMat.HasProperty("_Surface") && litShader != null)
+                fadeMat.shader = litShader;
+
+            ConfigureTransparency(fadeMat);
+            fadeMaterials[i] = fadeMat;
+        }
+
+        _fadeMats[renderer]     = fadeMaterials;
+        _currentAlphas[renderer] = 1f;
+
+        // Назначаем через sharedMaterials — без GC-аллокации getter'а.
+        renderer.sharedMaterials = fadeMaterials;
+    }
+
+    private static void ConfigureTransparency(Material mat)
+    {
+        if (mat.HasProperty("_Surface"))  mat.SetFloat("_Surface", 1f); // 1 = Transparent
+        if (mat.HasProperty("_Mode"))     mat.SetFloat("_Mode",    3f); // 3 = Transparent
+        if (mat.HasProperty("_SrcBlend")) mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        if (mat.HasProperty("_DstBlend")) mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        if (mat.HasProperty("_ZWrite"))   mat.SetInt("_ZWrite", 0);
+
+        mat.DisableKeyword("_ALPHATEST_ON");
+        mat.EnableKeyword("_ALPHABLEND_ON");
+        mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        mat.renderQueue = 3000;
+    }
+
+    /// <summary>Устанавливает alpha всем fade-материалам renderer'а.</summary>
+    private void SetAlpha(Renderer renderer, float alpha)
+    {
+        if (!_fadeMats.TryGetValue(renderer, out Material[] mats)) return;
+
         for (int i = 0; i < mats.Length; i++)
         {
-            if (mats[i].HasProperty("_BaseColor"))
+            Material mat = mats[i];
+            if (mat == null) continue;
+
+            if (mat.HasProperty("_BaseColor"))
             {
-                Color c = mats[i].GetColor("_BaseColor");
-                c.a = a;
-                mats[i].SetColor("_BaseColor", c);
+                Color c = mat.GetColor("_BaseColor");
+                c.a = alpha;
+                mat.SetColor("_BaseColor", c);
             }
-            else if (mats[i].HasProperty("_Color"))
+            else if (mat.HasProperty("_Color"))
             {
-                Color c = mats[i].GetColor("_Color");
-                c.a = a;
-                mats[i].SetColor("_Color", c);
+                Color c = mat.GetColor("_Color");
+                c.a = alpha;
+                mat.SetColor("_Color", c);
             }
         }
+    }
+
+    /// <summary>
+    /// Восстанавливает оригинальные sharedMaterials renderer'а и
+    /// уничтожает runtime fade-материалы.
+    /// </summary>
+    private void RestoreRenderer(Renderer renderer)
+    {
+        if (renderer != null && _originalMats.TryGetValue(renderer, out Material[] originals))
+            renderer.sharedMaterials = originals;
+
+        if (_fadeMats.TryGetValue(renderer, out Material[] fadeMats))
+        {
+            foreach (Material mat in fadeMats)
+                if (mat != null) Destroy(mat);
+        }
+
+        _originalMats.Remove(renderer);
+        _fadeMats.Remove(renderer);
+        _currentAlphas.Remove(renderer);
+    }
+
+    /// <summary>
+    /// При уничтожении компонента — восстанавливаем все renderer'ы и
+    /// уничтожаем все runtime-материалы, чтобы не оставить сцену в битом состоянии.
+    /// </summary>
+    private void OnDestroy()
+    {
+        // Копируем ключи, т.к. RestoreRenderer модифицирует словари.
+        _toRestore.Clear();
+        _toRestore.AddRange(_originalMats.Keys);
+
+        foreach (Renderer renderer in _toRestore)
+            RestoreRenderer(renderer);
+
+        _rendererCache.Clear();
+        _hiddenThisFrame.Clear();
     }
 }

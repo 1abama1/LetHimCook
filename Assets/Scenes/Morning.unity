@@ -2486,7 +2486,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
-  autoSpawnPlate: 0
+  autoSpawnPlate: 1
   defaultPlatePrefab: {fileID: 0}
   itemAnchor: {fileID: 476219832}
   ingredientIconPrefab: {fileID: 0}
@@ -5681,8 +5681,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Countertop
   storedIngredient: {fileID: 0}
   storedPlate: {fileID: 0}
-  autoSpawnPlate: 0
-  defaultPlatePrefab: {fileID: 0}
+  autoSpawnPlate: 1
+  defaultPlatePrefab: {fileID: 3581203796048612210, guid: 1cba40f6b1fed384faa32133dae70249, type: 3}
   itemAnchor: {fileID: 832271384}
   ingredientIconPrefab: {fileID: 0}
 --- !u!64 &670431670
@@ -7276,6 +7276,7 @@ MonoBehaviour:
     volume: 0.8
     pitchVariance: 0
     loop: 0
+  poolSize: 16
   nightMusic: {fileID: 8300000, guid: 4a7c295cb0fb93248bae91c126f79105, type: 3}
   dayMusic: {fileID: 8300000, guid: c95d248d80908bc4a808064fcd2f03ac, type: 3}
   musicVolume: 0.4
@@ -7318,7 +7319,7 @@ MonoBehaviour:
   playerEconomy: {fileID: 320077705}
   currentPhase: 0
   dayDurationSeconds: 250
-  nightDurationSeconds: 90
+  nightDurationSeconds: 3
   daySpawnPosition: {x: 50.55, y: 0.49183, z: -47.63}
   daySpawnRotation: {x: 0, y: 0, z: 0}
   nightSpawnPosition: {x: 36.678, y: 0.88983, z: -47.76}
@@ -7478,7 +7479,7 @@ MonoBehaviour:
   backstoryText: "You\u2019re a chef. Chef Tony. One day, your restaurant got some
     unwanted 'protection' from the mafia. Now you owe them 1000$ if you don't want
     to kick the bucket, you should give them this money in 3 days. Well... time to
-    go dumpster diving, you budgeting genius."
+    go dumpster diving, you budgeting genius.\n\n\n\n\n\n\nPress SPACE to continue"
   globalFont: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
   onStoryFinished:
     m_PersistentCalls:

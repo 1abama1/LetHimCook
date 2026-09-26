@@ -63,6 +63,14 @@ public class GameHUD : MonoBehaviour
     private bool _isTyping;
     private string _currentFullText;
 
+    // Кеш GameManager для безопасного OnDisable/OnDestroy.
+    private GameManager _boundGameManager;
+
+    // Кешированные хэши Animator-триггеров фазы.
+    private static readonly int NightHash = Animator.StringToHash("Night");
+    private static readonly int DayHash   = Animator.StringToHash("Day");
+
+
     void Start()
     {
         _murderSystem = FindFirstObjectByType<MurderSystem>();
@@ -97,20 +105,15 @@ public class GameHUD : MonoBehaviour
             DialogueSystem.Instance.onDialogueEnd.AddListener(HideDialogue);
         }
 
-        if (GameManager.Instance != null)
+        // Именованные методы — легко снять через RemoveListener.
+        _boundGameManager = GameManager.Instance;
+        if (_boundGameManager != null)
         {
-            GameManager.Instance.onNightBegin.AddListener(() =>
-            {
-                SetBatteryGroupVisible(true);
-                if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger("Night");
-            });
-            GameManager.Instance.onDayBegin.AddListener(() =>
-            {
-                SetBatteryGroupVisible(false);
-                if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger("Day");
-            });
+            _boundGameManager.onNightBegin.AddListener(OnNightBegin);
+            _boundGameManager.onDayBegin.AddListener(OnDayBegin);
         }
 
+        // Initial pull — подписчик читает состояние сам, не зависит от SEO.
         UpdateMoney(PlayerEconomy.Instance?.Money ?? 0);
         UpdateSuspicion();
         UpdateReputation(RestaurantReputation.Instance?.reputation ?? 50f);
@@ -124,6 +127,51 @@ public class GameHUD : MonoBehaviour
         ApplyGlobalFonts();
         HideDialogue();
     }
+
+    void OnDestroy()
+    {
+        if (_boundGameManager != null)
+        {
+            _boundGameManager.onNightBegin.RemoveListener(OnNightBegin);
+            _boundGameManager.onDayBegin.RemoveListener(OnDayBegin);
+        }
+
+        if (PlayerEconomy.Instance != null)
+        {
+            PlayerEconomy.Instance.onMoneyChanged.RemoveListener(UpdateMoney);
+            PlayerEconomy.Instance.onResourceChanged.RemoveListener(UpdateResource);
+        }
+
+        if (_flashlight != null)
+            _flashlight.onBatteryChanged.RemoveListener(UpdateBattery);
+
+        if (RestaurantReputation.Instance != null)
+        {
+            RestaurantReputation.Instance.onReputationChanged.RemoveListener(UpdateReputation);
+            RestaurantReputation.Instance.onGameOver.RemoveListener(ShowGameOver);
+        }
+
+        if (DialogueSystem.Instance != null)
+        {
+            DialogueSystem.Instance.onLineStart.RemoveListener(ShowDialogueLine);
+            DialogueSystem.Instance.onShowChoices.RemoveListener(ShowChoices);
+            DialogueSystem.Instance.onDialogueEnd.RemoveListener(HideDialogue);
+        }
+    }
+
+    // Именованные обработчики фазы с хешированными Animator-триггерами.
+    private void OnNightBegin()
+    {
+        SetBatteryGroupVisible(true);
+        if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger(NightHash);
+    }
+
+    private void OnDayBegin()
+    {
+        SetBatteryGroupVisible(false);
+        if (phaseIconAnimator != null) phaseIconAnimator.SetTrigger(DayHash);
+    }
+
 
     void Update()
     {
@@ -214,11 +262,8 @@ public class GameHUD : MonoBehaviour
 
     void UpdateSuspicion()
     {
-        float max = 0f;
-
-        var inspector = FindFirstObjectByType<InspectorAI>();
-        if (inspector != null && inspector.suspicion > max)
-            max = inspector.suspicion;
+        // Используем кешированную ссылку из Start() — никаких FindFirstObjectByType в Update.
+        float max = (_inspector != null) ? _inspector.suspicion : 0f;
 
         if (Mathf.Abs(max - _lastSuspicion) > 0.5f)
         {

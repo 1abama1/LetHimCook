@@ -18,8 +18,10 @@ public class ClientOrderUI : MonoBehaviour
     private TextMeshProUGUI _dishLabel;
     private Image           _patienceBar;
     private Image           _patienceFill;
+    private Slider          _patienceSlider;   // кеш — создаётся в Awake, не ищется каждый кадр
     private ClientNPC       _client;
     private Camera          _mainCamera;
+
 
     void Awake()
     {
@@ -99,6 +101,8 @@ public class ClientOrderUI : MonoBehaviour
         handle.AddComponent<Image>().color = Color.clear;
         slider.handleRect = handleRt;
 
+        _patienceSlider = slider;   // кешируем — больше не ищем через GetComponentInChildren
+
         _patienceBar = bgImg;
     }
 
@@ -118,13 +122,12 @@ public class ClientOrderUI : MonoBehaviour
             transform.LookAt(transform.position + _mainCamera.transform.rotation * Vector3.forward,
                              _mainCamera.transform.rotation * Vector3.up);
 
-        // Обновляем цвет терпения
+        // Обновляем цвет и значение слайдера через кешированные ссылки.
         float t = _client.PatiencePercent;
         if (_patienceFill != null)
             _patienceFill.color = Color.Lerp(patienceLowColor, patienceHighColor, t);
 
-        // Ищем слайдер и обновляем значение
-        Slider s = GetComponentInChildren<Slider>();
-        if (s != null) s.value = t;
+        if (_patienceSlider != null)
+            _patienceSlider.value = t;
     }
 }

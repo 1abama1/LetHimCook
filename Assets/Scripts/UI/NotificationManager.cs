@@ -24,20 +24,34 @@ public class NotificationManager : MonoBehaviour
         BuildContainer();
     }
 
+    // Кеш экономики для корректного OnDestroy.
+    private PlayerEconomy _economy;
+
     void Start()
     {
         // Автоматически подписываемся на экономику игрока
-        if (PlayerEconomy.Instance != null)
+        _economy = PlayerEconomy.Instance;
+
+        if (_economy != null)
         {
-            _prevMoney = PlayerEconomy.Instance.Money;
+            _prevMoney = _economy.Money;
             
             // Запоминаем стартовые значения ресурсов
-            _prevResources[ResourceType.FreshIngredient] = PlayerEconomy.Instance.FreshIngredients;
-            _prevResources[ResourceType.SpoiledIngredient] = PlayerEconomy.Instance.SpoiledIngredients;
-            _prevResources[ResourceType.JunkLoot] = PlayerEconomy.Instance.JunkLoot;
+            _prevResources[ResourceType.FreshIngredient]   = _economy.FreshIngredients;
+            _prevResources[ResourceType.SpoiledIngredient] = _economy.SpoiledIngredients;
+            _prevResources[ResourceType.JunkLoot]          = _economy.JunkLoot;
 
-            PlayerEconomy.Instance.onMoneyChanged.AddListener(OnMoneyChanged);
-            PlayerEconomy.Instance.onResourceChanged.AddListener(OnResourceChanged);
+            _economy.onMoneyChanged.AddListener(OnMoneyChanged);
+            _economy.onResourceChanged.AddListener(OnResourceChanged);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (_economy != null)
+        {
+            _economy.onMoneyChanged.RemoveListener(OnMoneyChanged);
+            _economy.onResourceChanged.RemoveListener(OnResourceChanged);
         }
     }
 

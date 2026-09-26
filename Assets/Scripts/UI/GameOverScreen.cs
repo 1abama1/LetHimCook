@@ -308,7 +308,7 @@ public class GameOverScreen : MonoBehaviour
         t.fontStyle = style;
         t.alignment = alignment;
         t.color     = color;
-        t.enableWordWrapping = true;
+        t.textWrappingMode = TextWrappingModes.Normal;
         return t;
     }
 

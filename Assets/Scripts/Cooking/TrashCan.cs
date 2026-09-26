@@ -32,7 +32,6 @@ public class TrashCan : MonoBehaviour, IInteractable
     // ── Состояние крышки ──────────────────────────────────────────
     private Quaternion _lidClosedRot;
     private Quaternion _lidOpenRot;
-    private bool       _isOpen;
     private Coroutine  _lidRoutine;
 
     // ── Unity ─────────────────────────────────────────────────────
@@ -108,7 +107,6 @@ public class TrashCan : MonoBehaviour, IInteractable
     private IEnumerator LidRoutine()
     {
         // Открыть
-        _isOpen = true;
         while (Quaternion.Angle(lid.localRotation, _lidOpenRot) > 0.5f)
         {
             lid.localRotation = Quaternion.Slerp(lid.localRotation, _lidOpenRot, lidSpeed * Time.deltaTime);
@@ -125,7 +123,6 @@ public class TrashCan : MonoBehaviour, IInteractable
             yield return null;
         }
         lid.localRotation = _lidClosedRot;
-        _isOpen = false;
     }
 
     // ── Gizmo ──────────────────────────────────────────────────────

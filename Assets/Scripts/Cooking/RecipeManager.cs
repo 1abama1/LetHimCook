@@ -11,7 +11,6 @@ public class RecipeManager : MonoBehaviour
 
     public RecipeData currentRecipe;
     private List<string> _addedIngredients = new List<string>();
-    private bool _usedSpoiled;
 
     public UnityEvent<RecipeData> onRecipeAssigned;
     public UnityEvent<string>     onIngredientAdded;
@@ -33,7 +32,6 @@ public class RecipeManager : MonoBehaviour
     {
         currentRecipe = recipe;
         _addedIngredients.Clear();
-        _usedSpoiled = false;
         Debug.Log($"[RecipeManager] Assigned new order: {recipe.recipeName}");
         onRecipeAssigned?.Invoke(recipe);
     }
@@ -56,7 +54,6 @@ public class RecipeManager : MonoBehaviour
         if (!needed) return;
 
         _addedIngredients.Add(ingredient.ingredientName);
-        if (ingredient.IsSpoiled) _usedSpoiled = true;
 
         Debug.Log($"[RecipeManager] Tracked {ingredient.ingredientName} for HUD. (Spoiled: {ingredient.IsSpoiled})");
 
@@ -100,7 +97,6 @@ public class RecipeManager : MonoBehaviour
 
             currentRecipe = null;
             _addedIngredients.Clear();
-            _usedSpoiled = false;
             return matched; // Success — caller notifies ClientNPC
         }
 
