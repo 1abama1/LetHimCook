@@ -1,8 +1,9 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-using UnityEngine.EventSystems;
 using System.Collections;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class MainMenuUI : MonoBehaviour
 {
@@ -26,16 +27,18 @@ public class MainMenuUI : MonoBehaviour
     {
         Time.timeScale = 1f;
 
+        EnsureSettingsPanel();
+
         ShowPanel(mainPanel);
         HidePanel(creditsPanel);
         HidePanel(settingsPanel);
 
         if (playButton != null) playButton.onClick.AddListener(OnPlay);
         if (creditsButton != null) creditsButton.onClick.AddListener(() => SwitchTo(creditsPanel));
-        if (settingsButton != null) settingsButton.onClick.AddListener(() => SwitchTo(settingsPanel));
+        if (settingsButton != null) settingsButton.onClick.AddListener(OpenSettings);
         if (quitButton != null) quitButton.onClick.AddListener(OnQuit);
         if (creditsBackButton != null) creditsBackButton.onClick.AddListener(() => SwitchTo(mainPanel));
-        if (settingsBackButton != null) settingsBackButton.onClick.AddListener(() => SwitchTo(mainPanel));
+        if (settingsBackButton != null) settingsBackButton.onClick.AddListener(CloseSettings);
 
         if (musicSlider != null)
         {
@@ -55,6 +58,34 @@ public class MainMenuUI : MonoBehaviour
             EventSystem.current.SetSelectedGameObject(playButton.gameObject);
     }
 
+    private void EnsureSettingsPanel()
+    {
+        if (settingsPanel != null)
+            return;
+
+        Transform parent = mainPanel != null ? mainPanel.transform.parent : transform;
+        TMP_FontAsset sourceFont = null;
+
+        if (settingsButton != null)
+        {
+            TMP_Text sourceLabel = settingsButton.GetComponentInChildren<TMP_Text>(true);
+            if (sourceLabel != null)
+                sourceFont = sourceLabel.font;
+        }
+
+        if (sourceFont == null && playButton != null)
+        {
+            TMP_Text sourceLabel = playButton.GetComponentInChildren<TMP_Text>(true);
+            if (sourceLabel != null)
+                sourceFont = sourceLabel.font;
+        }
+
+        MainMenuSettingsPanel generated = MainMenuSettingsPanel.Create(parent, sourceFont);
+        settingsPanel = generated.Group;
+        musicSlider = generated.MusicSlider;
+        settingsBackButton = generated.BackButton;
+    }
+
     private void SetupButtonVisuals()
     {
         StyleButton(playButton, MenuButtonFx.Variant.Primary);
@@ -68,9 +99,28 @@ public class MainMenuUI : MonoBehaviour
     private static void StyleButton(Button button, MenuButtonFx.Variant variant)
     {
         if (button == null) return;
+
         MenuButtonFx fx = button.GetComponent<MenuButtonFx>();
-        if (fx == null) fx = button.gameObject.AddComponent<MenuButtonFx>();
+        if (fx == null)
+            fx = button.gameObject.AddComponent<MenuButtonFx>();
+
         fx.Configure(button, variant);
+    }
+
+    private void OpenSettings()
+    {
+        SwitchTo(settingsPanel);
+
+        if (EventSystem.current != null && musicSlider != null)
+            EventSystem.current.SetSelectedGameObject(musicSlider.gameObject);
+    }
+
+    private void CloseSettings()
+    {
+        SwitchTo(mainPanel);
+
+        if (EventSystem.current != null && settingsButton != null)
+            EventSystem.current.SetSelectedGameObject(settingsButton.gameObject);
     }
 
     private void OnPlay() => StartCoroutine(FadeAndLoad());
@@ -86,6 +136,9 @@ public class MainMenuUI : MonoBehaviour
 
     private void SwitchTo(CanvasGroup target)
     {
+        if (target == null)
+            return;
+
         StopAllCoroutines();
         StartCoroutine(CrossFade(target));
     }
@@ -95,18 +148,22 @@ public class MainMenuUI : MonoBehaviour
         CanvasGroup[] panels = { mainPanel, creditsPanel, settingsPanel };
 
         foreach (CanvasGroup panel in panels)
+        {
             if (panel != null && panel.alpha > 0.1f && panel != target)
                 yield return StartCoroutine(Fade(panel, 0f));
+        }
 
         yield return StartCoroutine(Fade(target, 1f));
     }
 
     private IEnumerator Fade(CanvasGroup group, float to)
     {
-        if (group == null) yield break;
+        if (group == null)
+            yield break;
 
         float from = group.alpha;
         float elapsed = 0f;
+
         group.blocksRaycasts = to > 0.5f;
         group.interactable = to > 0.5f;
 
@@ -122,13 +179,17 @@ public class MainMenuUI : MonoBehaviour
 
     private IEnumerator FadeAndLoad()
     {
-        if (mainPanel != null) yield return StartCoroutine(Fade(mainPanel, 0f));
+        if (mainPanel != null)
+            yield return StartCoroutine(Fade(mainPanel, 0f));
+
         SceneManager.LoadScene(gameScene);
     }
 
     private static void ShowPanel(CanvasGroup group)
     {
-        if (group == null) return;
+        if (group == null)
+            return;
+
         group.alpha = 1f;
         group.blocksRaycasts = true;
         group.interactable = true;
@@ -136,7 +197,9 @@ public class MainMenuUI : MonoBehaviour
 
     private static void HidePanel(CanvasGroup group)
     {
-        if (group == null) return;
+        if (group == null)
+            return;
+
         group.alpha = 0f;
         group.blocksRaycasts = false;
         group.interactable = false;
