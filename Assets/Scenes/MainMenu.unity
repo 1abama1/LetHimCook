@@ -547,6 +547,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &82678492
 MeshRenderer:
@@ -1451,6 +1453,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &271251530
 MeshRenderer:
@@ -1549,7 +1553,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 393964545}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: 96a433fdd62567049a530c7f396262c7, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 6d0597b448b125b4eae7889bebd6560e, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 0}
@@ -1655,6 +1659,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &442798747
 MeshRenderer:
@@ -1898,6 +1904,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &555281064
 MeshRenderer:
@@ -2329,6 +2337,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &590445519
 MeshRenderer:
@@ -5174,6 +5184,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 12fa0c733599b6e49bc4f8b93eae4dce, type: 2}
   - {fileID: 11400000, guid: 93199ea49d0bfde43a5ddd45f46329f9, type: 2}
   - {fileID: 11400000, guid: 2bed5ed9f0a5287499ac689519c7a093, type: 2}
+  freshIngredientPool: []
+  freshFoodChance: 15
   searchParticlePrefab: {fileID: 0}
 --- !u!23 &1746502697
 MeshRenderer:
